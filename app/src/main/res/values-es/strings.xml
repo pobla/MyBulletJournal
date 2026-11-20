@@ -190,4 +190,15 @@
     <string name="whats_new_button">Ver novedades</string>
     <string name="whats_new_update_header">Qué trae:</string>
     <string name="got_it">Entendido</string>
+
+    <!-- Widget y añadir rápido -->
+    <string name="widget_name">Hoy</string>
+    <string name="widget_description">Las tareas de hoy y un botón para añadir una sin abrir la app</string>
+    <string name="widget_add_task">+ Tarea</string>
+    <string name="widget_empty">Nada para hoy todavía</string>
+    <string name="quick_add_title">Añadir a hoy</string>
+    <string name="quick_added">Añadido a hoy</string>
+    <string name="widget_settings_title">Widget de la pantalla de inicio</string>
+    <string name="widget_settings_desc">Ve las tareas de hoy y añade una directamente desde la pantalla de inicio.</string>
+    <string name="widget_settings_action">Añadir widget</string>
 </resources>

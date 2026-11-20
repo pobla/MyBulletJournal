@@ -10,6 +10,11 @@ import com.pobla.cuaderno.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import androidx.glance.appwidget.updateAll
+import com.pobla.cuaderno.widget.TaskWidget
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 
 /** Contenedor de dependencias manual (sin Hilt, para mantenerlo sencillo). */
 class AppContainer(app: Application) {
@@ -32,5 +37,16 @@ class CuadernoApp : Application() {
         super.onCreate()
         container = AppContainer(this)
         Notifications.createChannels(this)
+        refreshWidgetOnChanges()
+    }
+
+    /** Cada cambio en las entradas (desde la app o el propio widget) repinta el widget. */
+    @OptIn(FlowPreview::class)
+    private fun refreshWidgetOnChanges() {
+        container.appScope.launch {
+            container.repository.observeEntriesChanges()
+                .debounce(500)
+                .collect { runCatching { TaskWidget().updateAll(this@CuadernoApp) } }
+        }
     }
 }

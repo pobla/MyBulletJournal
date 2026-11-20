@@ -36,7 +36,7 @@ Por eso conviene escribir los commits pensando en que son las notas de versión.
 | 1 | Estructura, workflow, Room, pantalla del día (navegación, hábitos, registro •○–, frase del día, "pasado al cuaderno" con resaltado de cambios) | ✅ |
 | 2 | Vista semanal, lista de días pendientes, edición de hábitos, navegación inferior | ✅ |
 | 2.5 | Estilo Material 3 Expressive, colores del fondo de pantalla (Android 12+), animaciones, deslizar entre días, actualizador integrado | ✅ |
-| 3 | Fotos desde cámara o galería (por entrada o por día) | ⏳ |
+| 3 | ~~Fotos~~ (descartada) | — |
 | 4 | Notificaciones con WorkManager (hábitos y pasar al cuaderno), permisos Android 13+ | ✅ |
 
 ## Uso rápido
@@ -47,6 +47,7 @@ Por eso conviene escribir los commits pensando en que son las notas de versión.
 - **Semana**: rejilla de hábitos (se puede marcar directamente) y resumen de cada día; toca un día para abrirlo.
 - **Pendientes**: días con apuntes sin pasar al cuaderno, del más antiguo al más reciente. ✓ los marca como pasados.
 - **Recordatorios** (Ajustes): uno para hábitos y otro para pasar al cuaderno, a la hora y en los días de la semana que elijas (p. ej. L–V a las 9:00). Solo avisan si hace falta (te falta algún hábito / hay días pendientes). Tocar la notificación abre el día o la lista de pendientes.
+- **Widget "Hoy"**: tareas y eventos pendientes de hoy en la pantalla de inicio, con **+ Tarea**, ○ y – para apuntar sin abrir la app (se abre una hoja con el teclado). Añádelo desde *Ajustes → Widget* o manteniendo pulsada la pantalla de inicio → Widgets.
 - **Importar texto**: comparte texto desde cualquier app (p. ej. una respuesta de Claude) a *Cuaderno de bolsillo*, o usa *⋮ → Importar texto* en la vista del día. Reconoce • ○ – × >, casillas y listas numeradas; líneas como "Mañana", "Lunes" o "23/11" cambian el día. "× Creatina" marca el hábito. Vista previa para desmarcar o cambiar tipos antes de guardar. El botón "Copiar instrucciones y abrir Claude" le pasa a Claude el formato.
 - **Ajustes**: añadir, renombrar, reordenar y quitar hábitos (se conserva el historial).
 - "Ya lo pasé" marca el día como pasado al cuaderno. Si después cambias algo, vuelve a pendiente y lo nuevo se resalta en naranja.

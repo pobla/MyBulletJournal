@@ -93,6 +93,9 @@ import com.pobla.cuaderno.util.shortName
 import com.pobla.cuaderno.BuildConfig
 import com.pobla.cuaderno.update.ReleaseNotes
 import com.pobla.cuaderno.ui.components.WhatsNewDialog
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import com.pobla.cuaderno.widget.TaskWidgetReceiver
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
@@ -324,6 +327,9 @@ fun SettingsScreen(
                 item(key = "language") { LanguageCard() }
             }
 
+            // Widget: Android 8+ permite pedir que se añada a la pantalla de inicio.
+            item(key = "widget") { WidgetCard() }
+
             item(key = "updates_title") { SectionTitle(stringResource(R.string.section_updates)) }
             item(key = "updates") {
                 UpdatesCard(
@@ -398,6 +404,30 @@ fun SettingsScreen(
             },
             dismissButton = { TextButton(onClick = { archiving = null }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+/** Pide al lanzador que añada el widget "Hoy" a la pantalla de inicio. */
+@Composable
+private fun WidgetCard() {
+    val context = LocalContext.current
+    val manager = remember { AppWidgetManager.getInstance(context) }
+    if (!manager.isRequestPinAppWidgetSupported) return
+    SettingsCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.widget_settings_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.widget_settings_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            FilledTonalButton(onClick = {
+                manager.requestPinAppWidget(ComponentName(context, TaskWidgetReceiver::class.java), null, null)
+            }) { Text(stringResource(R.string.widget_settings_action)) }
+        }
     }
 }
 

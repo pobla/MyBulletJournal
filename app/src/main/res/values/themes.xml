@@ -3,4 +3,11 @@
     <style name="Theme.Cuaderno" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/paper</item>
     </style>
+
+    <!-- Hoja de "añadir rápido" sobre la pantalla de inicio -->
+    <style name="Theme.Cuaderno.QuickAdd" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

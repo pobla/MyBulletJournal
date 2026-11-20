@@ -40,6 +40,13 @@ interface JournalDao {
     @Query("SELECT * FROM entries WHERE epochDay = :epochDay ORDER BY position, id")
     fun observeEntries(epochDay: Long): Flow<List<EntryEntity>>
 
+    @Query("SELECT * FROM entries WHERE epochDay = :epochDay ORDER BY position, id")
+    suspend fun getEntries(epochDay: Long): List<EntryEntity>
+
+    /** Emite cada vez que cambia la tabla de entradas (para refrescar el widget). */
+    @Query("SELECT COUNT(*) FROM entries")
+    fun observeEntriesChanges(): Flow<Int>
+
     @Query("SELECT * FROM entries WHERE id = :id")
     suspend fun getEntry(id: Long): EntryEntity?
 

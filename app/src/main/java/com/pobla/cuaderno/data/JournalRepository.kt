@@ -65,6 +65,11 @@ class JournalRepository(
 
     fun observeActiveHabits(): Flow<List<HabitEntity>> = dao.observeActiveHabits()
 
+    // Para el widget
+    suspend fun getEntries(date: LocalDate): List<EntryEntity> = dao.getEntries(date.toEpochDay())
+
+    fun observeEntriesChanges(): Flow<Int> = dao.observeEntriesChanges()
+
     // Para los recordatorios
     suspend fun getPendingDays(): List<PendingDayRow> = dao.getPendingDays()
 

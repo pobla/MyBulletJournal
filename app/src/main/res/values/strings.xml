@@ -183,4 +183,15 @@
     <string name="whats_new_button">See what\'s new</string>
     <string name="whats_new_update_header">What it brings:</string>
     <string name="got_it">Got it</string>
+
+    <!-- Widget and quick add -->
+    <string name="widget_name">Today</string>
+    <string name="widget_description">Today\'s tasks and a button to add one without opening the app</string>
+    <string name="widget_add_task">+ Task</string>
+    <string name="widget_empty">Nothing for today yet</string>
+    <string name="quick_add_title">Add to today</string>
+    <string name="quick_added">Added to today</string>
+    <string name="widget_settings_title">Home screen widget</string>
+    <string name="widget_settings_desc">See today\'s tasks and add one straight from the home screen.</string>
+    <string name="widget_settings_action">Add widget</string>
 </resources>
