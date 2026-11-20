@@ -9,7 +9,12 @@ val ciVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNul
 
 android {
     namespace = "com.pobla.cuaderno"
-    compileSdk = 37
+    // Compose 1.13 exige la API menor 37.1.
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId = "com.pobla.cuaderno"

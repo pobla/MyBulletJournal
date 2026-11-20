@@ -1,5 +1,11 @@
+@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
+
 package com.pobla.cuaderno.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -10,7 +16,12 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -19,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +47,8 @@ import com.pobla.cuaderno.ui.pending.PendingRoute
 import com.pobla.cuaderno.ui.pending.PendingViewModel
 import com.pobla.cuaderno.ui.settings.SettingsRoute
 import com.pobla.cuaderno.ui.week.WeekRoute
+import com.pobla.cuaderno.CuadernoApp
+import com.pobla.cuaderno.update.UpdateState
 import java.time.LocalDate
 
 private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
@@ -44,7 +58,6 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
     SETTINGS("settings", "Ajustes", Icons.Filled.Settings),
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppRoot() {
     val navController = rememberNavController()
@@ -61,6 +74,10 @@ fun AppRoot() {
         dayViewModel.goTo(date)
         navController.navigateToTab(Tab.DAY.route)
     }
+
+    val motion = MaterialTheme.motionScheme
+
+    UpdatePrompt()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -92,6 +109,10 @@ fun AppRoot() {
         NavHost(
             navController = navController,
             startDestination = Tab.DAY.route,
+            enterTransition = { fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.96f) },
+            exitTransition = { fadeOut(motion.fastEffectsSpec()) },
+            popEnterTransition = { fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.96f) },
+            popExitTransition = { fadeOut(motion.fastEffectsSpec()) },
             modifier = Modifier
                 .padding(padding)
                 .consumeWindowInsets(padding),
@@ -109,5 +130,46 @@ private fun NavController.navigateToTab(route: String) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+/**
+ * Si la comprobación diaria encuentra una versión nueva, la ofrece una vez.
+ * El progreso de la descarga y el botón "Instalar" se ven también en Ajustes.
+ */
+@Composable
+private fun UpdatePrompt() {
+    val context = LocalContext.current
+    val updates = (context.applicationContext as CuadernoApp).container.updates
+    val state by updates.state.collectAsStateWithLifecycle()
+
+    when (val s = state) {
+        is UpdateState.Available -> if (updates.promptedVersion != s.versionCode) {
+            AlertDialog(
+                onDismissRequest = { updates.promptedVersion = s.versionCode },
+                title = { Text("Nueva versión disponible") },
+                text = { Text("Hay una versión nueva (#${s.versionCode}). Se descarga aquí mismo y Android te pedirá confirmar la instalación.") },
+                confirmButton = {
+                    Button(onClick = { updates.download() }) { Text("Actualizar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { updates.promptedVersion = s.versionCode }) { Text("Luego") }
+                },
+            )
+        }
+        is UpdateState.ReadyToInstall -> if (updates.promptedVersion != s.versionCode) {
+            AlertDialog(
+                onDismissRequest = { updates.promptedVersion = s.versionCode },
+                title = { Text("Actualización descargada") },
+                text = { Text("Pulsa instalar. Si es la primera vez, Android te pedirá permitir instalar apps desde Cuaderno de bolsillo; actívalo, vuelve y pulsa instalar otra vez.") },
+                confirmButton = {
+                    Button(onClick = { updates.install(context) }) { Text("Instalar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { updates.promptedVersion = s.versionCode }) { Text("Luego") }
+                },
+            )
+        }
+        else -> Unit
     }
 }

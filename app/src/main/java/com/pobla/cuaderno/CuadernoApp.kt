@@ -1,8 +1,10 @@
 package com.pobla.cuaderno
 
 import android.app.Application
+import com.pobla.cuaderno.data.AppSettings
 import com.pobla.cuaderno.data.JournalRepository
 import com.pobla.cuaderno.data.db.AppDatabase
+import com.pobla.cuaderno.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +16,9 @@ class AppContainer(app: Application) {
 
     /** Para escrituras que deben terminar aunque se cierre la pantalla. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val settings = AppSettings(app)
+    val updates = UpdateManager(app, settings, appScope)
 }
 
 class CuadernoApp : Application() {

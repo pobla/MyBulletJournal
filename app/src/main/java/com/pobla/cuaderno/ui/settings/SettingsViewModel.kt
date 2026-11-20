@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.pobla.cuaderno.CuadernoApp
+import com.pobla.cuaderno.data.AppSettings
 import com.pobla.cuaderno.data.JournalRepository
 import com.pobla.cuaderno.data.db.HabitEntity
+import com.pobla.cuaderno.update.UpdateManager
+import com.pobla.cuaderno.update.UpdateState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +20,16 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val repository: JournalRepository,
     private val appScope: CoroutineScope,
+    private val settings: AppSettings,
+    val updates: UpdateManager,
 ) : ViewModel() {
+
+    val dynamicColor: StateFlow<Boolean> = settings.dynamicColor
+    val updateState: StateFlow<UpdateState> = updates.state
+
+    fun setDynamicColor(enabled: Boolean) = settings.setDynamicColor(enabled)
+    fun checkForUpdates() = updates.check()
+    fun downloadUpdate() = updates.download()
 
     val habits: StateFlow<List<HabitEntity>> = repository.observeActiveHabits()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -46,7 +58,12 @@ class SettingsViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as CuadernoApp
-                SettingsViewModel(app.container.repository, app.container.appScope)
+                SettingsViewModel(
+                    repository = app.container.repository,
+                    appScope = app.container.appScope,
+                    settings = app.container.settings,
+                    updates = app.container.updates,
+                )
             }
         }
     }
