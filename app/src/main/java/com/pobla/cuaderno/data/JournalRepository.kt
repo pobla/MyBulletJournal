@@ -8,6 +8,7 @@ import com.pobla.cuaderno.data.db.HabitCheckEntity
 import com.pobla.cuaderno.data.db.HabitEntity
 import com.pobla.cuaderno.data.db.PendingDayRow
 import com.pobla.cuaderno.model.EntryType
+import com.pobla.cuaderno.model.ImportItem
 import com.pobla.cuaderno.model.TaskStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -168,6 +169,34 @@ class JournalRepository(
                 day.copy(transcribed = false)
             },
         )
+    }
+
+    /** Guarda lo importado de golpe; los hábitos reconocidos se marcan como hechos. */
+    suspend fun importItems(items: List<ImportItem>) = db.withTransaction {
+        val t = now()
+        items.groupBy { it.date }.forEach { (date, list) ->
+            val d = date.toEpochDay()
+            var position = dao.nextEntryPosition(d)
+            list.forEach { item ->
+                val habitId = item.habitId
+                if (habitId != null) {
+                    dao.upsertHabitCheck(HabitCheckEntity(d, habitId, done = true, updatedAt = t))
+                } else {
+                    dao.insertEntry(
+                        EntryEntity(
+                            epochDay = d,
+                            type = item.type,
+                            status = if (item.type == EntryType.TASK) item.status else TaskStatus.OPEN,
+                            text = item.text,
+                            position = position++,
+                            createdAt = t,
+                            updatedAt = t,
+                        ),
+                    )
+                }
+            }
+            markChanged(d, t)
+        }
     }
 
     private suspend fun markChanged(epochDay: Long, t: Long) {

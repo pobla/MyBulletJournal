@@ -160,4 +160,27 @@
         <item>Duolingo</item>
         <item>Ejercicio</item>
     </string-array>
+
+    <!-- Importar -->
+    <string name="more_options">Más opciones</string>
+    <string name="import_title">Importar texto</string>
+    <string name="import_hint">Una línea por elemento: • tarea, ○ evento, – nota, × hecho. Una línea como “Mañana”, “Lunes” o “23/11” cambia el día de las líneas de debajo.</string>
+    <string name="import_placeholder">Pega aquí el texto</string>
+    <string name="import_default_date">Lo que no tenga fecha va a</string>
+    <string name="import_nothing">Todavía no hay nada reconocible</string>
+    <plurals name="import_action">
+        <item quantity="one">Importar %d</item>
+        <item quantity="many">Importar %d</item>
+        <item quantity="other">Importar %d</item>
+    </plurals>
+    <plurals name="import_done">
+        <item quantity="one">%d elemento importado</item>
+        <item quantity="many">%d elementos importados</item>
+        <item quantity="other">%d elementos importados</item>
+    </plurals>
+    <string name="import_habit">hábito</string>
+    <string name="import_open_claude">Copiar instrucciones y abrir Claude</string>
+    <string name="import_copy_prompt">Copiar instrucciones para Claude</string>
+    <string name="import_prompt_copied">Instrucciones copiadas: pégalas en Claude y comparte aquí la respuesta</string>
+    <string name="import_prompt">Convierte lo que te diga en una lista de bullet journal. Una línea por elemento, empezando por: • para una tarea, ○ para un evento, – para una nota, × para algo ya hecho (incluidos hábitos como Creatina). Si algo es de otro día, pon antes una línea solo con la fecha (Hoy, Mañana, Lunes o 2026-11-23). Sin ningún otro texto.</string>
 </resources>

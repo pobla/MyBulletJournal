@@ -155,4 +155,25 @@
         <item>Duolingo</item>
         <item>Exercise</item>
     </string-array>
+
+    <!-- Import -->
+    <string name="more_options">More options</string>
+    <string name="import_title">Import text</string>
+    <string name="import_hint">One line per item: • task, ○ event, – note, × done. A line such as “Tomorrow”, “Monday” or “23/11” sets the day for the lines below it.</string>
+    <string name="import_placeholder">Paste the text here</string>
+    <string name="import_default_date">Lines without a date go to</string>
+    <string name="import_nothing">Nothing recognised yet</string>
+    <plurals name="import_action">
+        <item quantity="one">Import %d</item>
+        <item quantity="other">Import %d</item>
+    </plurals>
+    <plurals name="import_done">
+        <item quantity="one">%d item imported</item>
+        <item quantity="other">%d items imported</item>
+    </plurals>
+    <string name="import_habit">habit</string>
+    <string name="import_open_claude">Copy instructions and open Claude</string>
+    <string name="import_copy_prompt">Copy instructions for Claude</string>
+    <string name="import_prompt_copied">Instructions copied: paste them in Claude, then share the reply here</string>
+    <string name="import_prompt">Turn what I tell you into a bullet journal list. One line per item, starting with: • for a task, ○ for an event, – for a note, × for something already done (including habits like Creatine). If something is for another day, put a line with just the date before it (Today, Tomorrow, Monday or 2026-11-23). No other text.</string>
 </resources>

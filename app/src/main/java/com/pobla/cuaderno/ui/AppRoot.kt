@@ -54,6 +54,12 @@ import java.time.LocalDate
 import androidx.compose.ui.res.stringResource
 import com.pobla.cuaderno.R
 import androidx.annotation.StringRes
+import android.widget.Toast
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.pobla.cuaderno.ui.importer.ImportDialog
 
 private enum class Tab(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
     DAY("day", R.string.tab_day, Icons.Filled.Create),
@@ -63,7 +69,12 @@ private enum class Tab(val route: String, @StringRes val labelRes: Int, val icon
 }
 
 @Composable
-fun AppRoot(requestedTab: String? = null, onTabHandled: () -> Unit = {}) {
+fun AppRoot(
+    requestedTab: String? = null,
+    onTabHandled: () -> Unit = {},
+    sharedText: String? = null,
+    onSharedTextHandled: () -> Unit = {},
+) {
     val navController = rememberNavController()
     // Compartidos a nivel de actividad: el día se abre desde Semana/Pendientes
     // y el número de pendientes se muestra en la barra inferior.
@@ -92,6 +103,34 @@ fun AppRoot(requestedTab: String? = null, onTabHandled: () -> Unit = {}) {
     }
 
     UpdatePrompt()
+
+    // Importar texto: llega compartido desde otra app o se abre desde el menú del día.
+    val context = LocalContext.current
+    var importText by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(sharedText) {
+        if (sharedText != null) {
+            importText = sharedText
+            onSharedTextHandled()
+        }
+    }
+    importText?.let { initial ->
+        // key: un texto compartido nuevo reinicia el diálogo
+        key(initial) {
+            ImportDialog(
+                initialText = initial,
+                onDismiss = { importText = null },
+                onImported = { firstDate, count ->
+                    importText = null
+                    Toast.makeText(
+                        context,
+                        context.resources.getQuantityString(R.plurals.import_done, count, count),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    openDay(firstDate)
+                },
+            )
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -131,7 +170,7 @@ fun AppRoot(requestedTab: String? = null, onTabHandled: () -> Unit = {}) {
                 .padding(padding)
                 .consumeWindowInsets(padding),
         ) {
-            composable(Tab.DAY.route) { DayRoute(dayViewModel) }
+            composable(Tab.DAY.route) { DayRoute(dayViewModel, onImport = { importText = "" }) }
             composable(Tab.WEEK.route) { WeekRoute(onOpenDay = openDay) }
             composable(Tab.PENDING.route) { PendingRoute(pendingViewModel, onOpenDay = openDay) }
             composable(Tab.SETTINGS.route) { SettingsRoute() }

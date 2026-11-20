@@ -17,6 +17,9 @@ class MainActivity : ComponentActivity() {
     /** Pestaña pedida desde una notificación (se consume al navegar). */
     private val requestedTab = MutableStateFlow<String?>(null)
 
+    /** Texto compartido desde otra app (p. ej. Claude) para importarlo. */
+    private val sharedText = MutableStateFlow<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -30,10 +33,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val dynamicColor by container.settings.dynamicColor.collectAsStateWithLifecycle()
             val tab by requestedTab.collectAsStateWithLifecycle()
+            val shared by sharedText.collectAsStateWithLifecycle()
             CuadernoTheme(dynamicColor = dynamicColor) {
                 AppRoot(
                     requestedTab = tab,
                     onTabHandled = { requestedTab.value = null },
+                    sharedText = shared,
+                    onSharedTextHandled = { sharedText.value = null },
                 )
             }
         }
@@ -45,6 +51,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        intent?.getStringExtra(Notifications.EXTRA_TAB)?.let { requestedTab.value = it }
+        intent ?: return
+        intent.getStringExtra(Notifications.EXTRA_TAB)?.let { requestedTab.value = it }
+        if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { sharedText.value = it }
+        }
     }
 }

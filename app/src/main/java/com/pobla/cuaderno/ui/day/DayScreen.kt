@@ -105,9 +105,15 @@ import com.pobla.cuaderno.util.longDate
 import com.pobla.cuaderno.util.weekdayName
 import androidx.compose.ui.res.stringResource
 import com.pobla.cuaderno.R
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 
 @Composable
-fun DayRoute(viewModel: DayViewModel = viewModel(factory = DayViewModel.Factory)) {
+fun DayRoute(
+    viewModel: DayViewModel = viewModel(factory = DayViewModel.Factory),
+    onImport: () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     DayScreen(
         state = state,
@@ -121,6 +127,7 @@ fun DayRoute(viewModel: DayViewModel = viewModel(factory = DayViewModel.Factory)
         onUpdateEntry = viewModel::updateEntry,
         onDeleteEntry = viewModel::deleteEntry,
         onSetTranscribed = viewModel::setTranscribed,
+        onImport = onImport,
     )
 }
 
@@ -137,8 +144,10 @@ fun DayScreen(
     onUpdateEntry: (Long, EntryType, TaskStatus, String) -> Unit,
     onDeleteEntry: (Long) -> Unit,
     onSetTranscribed: (Boolean) -> Unit,
+    onImport: () -> Unit = {},
 ) {
     var editing by remember { mutableStateOf<EntryUi?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
     val motion = MaterialTheme.motionScheme
 
     Scaffold(
@@ -187,6 +196,20 @@ fun DayScreen(
                     }
                     IconButton(onClick = onNext) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.next_day))
+                    }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_options))
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.import_title)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onImport()
+                                },
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
