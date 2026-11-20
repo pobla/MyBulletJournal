@@ -83,6 +83,13 @@ import com.pobla.cuaderno.reminders.Notifications
 import com.pobla.cuaderno.ui.components.SectionTitle
 import com.pobla.cuaderno.update.UpdateState
 import java.time.DayOfWeek
+import androidx.compose.ui.res.stringResource
+import com.pobla.cuaderno.R
+import com.pobla.cuaderno.data.ALL_DAYS
+import com.pobla.cuaderno.data.WORKDAYS
+import com.pobla.cuaderno.data.WEEKEND
+import com.pobla.cuaderno.util.letter
+import com.pobla.cuaderno.util.shortName
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
@@ -191,7 +198,7 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Ajustes", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
@@ -206,10 +213,10 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "habits_title") { SectionTitle("Hábitos diarios") }
+            item(key = "habits_title") { SectionTitle(stringResource(R.string.section_daily_habits)) }
             item(key = "habits_hint") {
                 Text(
-                    "Toca un hábito para renombrarlo. Al quitarlo se conserva lo que ya marcaste en días pasados.",
+                    stringResource(R.string.habits_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -235,7 +242,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = newHabit,
                         onValueChange = { newHabit = it },
-                        placeholder = { Text("Nuevo hábito") },
+                        placeholder = { Text(stringResource(R.string.new_habit)) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.extraLarge,
                         modifier = Modifier.weight(1f),
@@ -247,12 +254,12 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     FilledTonalIconButton(onClick = { submitNew() }, enabled = newHabit.isNotBlank()) {
-                        Icon(Icons.Filled.Add, contentDescription = "Añadir hábito")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_habit))
                     }
                 }
             }
 
-            item(key = "reminders_title") { SectionTitle("Recordatorios") }
+            item(key = "reminders_title") { SectionTitle(stringResource(R.string.section_reminders)) }
             if (!notificationsAllowed && reminders.values.any { it.enabled }) {
                 item(key = "reminders_blocked") {
                     Surface(
@@ -266,11 +273,11 @@ fun SettingsScreen(
                             modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                         ) {
                             Text(
-                                "Las notificaciones están bloqueadas: los recordatorios no se verán.",
+                                stringResource(R.string.notifications_blocked),
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
-                            TextButton(onClick = onOpenNotificationSettings) { Text("Permitir") }
+                            TextButton(onClick = onOpenNotificationSettings) { Text(stringResource(R.string.allow)) }
                         }
                     }
                 }
@@ -290,14 +297,14 @@ fun SettingsScreen(
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                item(key = "look_title") { SectionTitle("Apariencia") }
+                item(key = "look_title") { SectionTitle(stringResource(R.string.section_appearance)) }
                 item(key = "dynamic") {
                     SettingsCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Colores del fondo de pantalla", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.dynamic_color_title), style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Como las apps de Pixel. Desactívalo para usar la paleta papel y tinta.",
+                                    stringResource(R.string.dynamic_color_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -309,7 +316,12 @@ fun SettingsScreen(
                 }
             }
 
-            item(key = "updates_title") { SectionTitle("Actualizaciones") }
+            // Idioma por app: Android 13+ (en versiones anteriores sigue el idioma del móvil).
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                item(key = "language") { LanguageCard() }
+            }
+
+            item(key = "updates_title") { SectionTitle(stringResource(R.string.section_updates)) }
             item(key = "updates") {
                 UpdatesCard(
                     state = updateState,
@@ -326,7 +338,7 @@ fun SettingsScreen(
         var name by rememberSaveable(habit.id) { mutableStateOf(habit.name) }
         AlertDialog(
             onDismissRequest = { renaming = null },
-            title = { Text("Renombrar hábito") },
+            title = { Text(stringResource(R.string.rename_habit)) },
             text = {
                 OutlinedTextField(
                     value = name,
@@ -343,9 +355,9 @@ fun SettingsScreen(
                         renaming = null
                     },
                     enabled = name.isNotBlank(),
-                ) { Text("Guardar") }
+                ) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancelar") } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -358,32 +370,64 @@ fun SettingsScreen(
         )
         AlertDialog(
             onDismissRequest = { pickingTime = null },
-            title = { Text(kind.title) },
+            title = { Text(stringResource(kind.titleRes)) },
             text = { TimePicker(state = timeState) },
             confirmButton = {
                 Button(onClick = {
                     onReminderTimeChange(kind, timeState.hour, timeState.minute)
                     pickingTime = null
-                }) { Text("Guardar") }
+                }) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton(onClick = { pickingTime = null }) { Text("Cancelar") } },
+            dismissButton = { TextButton(onClick = { pickingTime = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     archiving?.let { habit ->
         AlertDialog(
             onDismissRequest = { archiving = null },
-            title = { Text("Quitar \"${habit.name}\"") },
-            text = { Text("Dejará de aparecer en los días nuevos. Lo que ya marcaste se conserva.") },
+            title = { Text(stringResource(R.string.remove_habit_title, habit.name)) },
+            text = { Text(stringResource(R.string.remove_habit_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     onArchive(habit.id)
                     archiving = null
-                }) { Text("Quitar", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { archiving = null }) { Text("Cancelar") } },
+            dismissButton = { TextButton(onClick = { archiving = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+}
+
+/** Abre el ajuste del sistema "Idioma de la app" (Android 13+). */
+@Composable
+private fun LanguageCard() {
+    val context = LocalContext.current
+    SettingsCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.language_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.language_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            FilledTonalButton(onClick = {
+                val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS)
+                    .setData(android.net.Uri.parse("package:${context.packageName}"))
+                context.startActivity(intent)
+            }) { Text(stringResource(R.string.change)) }
+        }
+    }
+}
+
+@Composable
+private fun daysLabel(days: Set<DayOfWeek>): String = when (days) {
+    ALL_DAYS -> stringResource(R.string.days_all)
+    WORKDAYS -> stringResource(R.string.days_workdays)
+    WEEKEND -> stringResource(R.string.days_weekend)
+    else -> days.sorted().joinToString(", ") { it.shortName() }
 }
 
 @Composable
@@ -395,14 +439,11 @@ private fun ReminderCard(
     onDaysChange: (Set<DayOfWeek>) -> Unit,
     onTest: () -> Unit,
 ) {
-    val description = when (kind) {
-        ReminderKind.HABITS -> "Solo avisa si te queda algún hábito sin marcar ese día."
-        ReminderKind.TRANSCRIBE -> "Solo avisa si hay días pendientes de pasar al cuaderno."
-    }
+    val description = stringResource(kind.descriptionRes)
     SettingsCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(kind.title, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(kind.titleRes), style = MaterialTheme.typography.titleMedium)
                 Text(
                     description,
                     style = MaterialTheme.typography.bodySmall,
@@ -423,16 +464,16 @@ private fun ReminderCard(
                 modifier = Modifier.padding(top = 8.dp),
             ) {
                 FilledTonalButton(onClick = onPickTime) {
-                    Text("A las ${setting.label}")
+                    Text(stringResource(R.string.at_time, setting.label))
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    setting.daysLabel,
+                    daysLabel(setting.days),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = onTest) { Text("Probar") }
+                TextButton(onClick = onTest) { Text(stringResource(R.string.test)) }
             }
         }
     }
@@ -483,7 +524,7 @@ private fun DaySelector(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        "LMXJVSD"[day.value - 1].toString(),
+                        day.letter(),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -518,9 +559,9 @@ private fun UpdatesCard(
 ) {
     val motion = MaterialTheme.motionScheme
     SettingsCard {
-        Text("Versión instalada: $versionName", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.installed_version, versionName), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Se comprueba sola una vez al día al abrir la app (release debug-latest de GitHub).",
+            stringResource(R.string.updates_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -532,29 +573,29 @@ private fun UpdatesCard(
             label = "actualizacion",
         ) { s ->
             when (s) {
-                UpdateState.Idle -> FilledTonalButton(onClick = onCheck) { Text("Buscar actualizaciones") }
-                UpdateState.Checking -> Text("Comprobando…", style = MaterialTheme.typography.bodyMedium)
+                UpdateState.Idle -> FilledTonalButton(onClick = onCheck) { Text(stringResource(R.string.check_updates)) }
+                UpdateState.Checking -> Text(stringResource(R.string.checking), style = MaterialTheme.typography.bodyMedium)
                 UpdateState.UpToDate -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Tienes la última versión ✓", modifier = Modifier.weight(1f))
-                    TextButton(onClick = onCheck) { Text("Volver a mirar") }
+                    Text(stringResource(R.string.up_to_date), modifier = Modifier.weight(1f))
+                    TextButton(onClick = onCheck) { Text(stringResource(R.string.check_again)) }
                 }
                 is UpdateState.Available -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Nueva versión #${s.versionCode}", modifier = Modifier.weight(1f))
-                    Button(onClick = onDownload) { Text("Descargar") }
+                    Text(stringResource(R.string.new_version, s.versionCode), modifier = Modifier.weight(1f))
+                    Button(onClick = onDownload) { Text(stringResource(R.string.download)) }
                 }
                 is UpdateState.Downloading -> Column {
                     val progress by animateFloatAsState(s.progress, motion.defaultEffectsSpec(), label = "progreso")
-                    Text("Descargando #${s.versionCode}… ${(s.progress * 100).toInt()} %")
+                    Text(stringResource(R.string.downloading, s.versionCode, (s.progress * 100).toInt()))
                     Spacer(Modifier.padding(top = 8.dp))
                     LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
                 }
                 is UpdateState.ReadyToInstall -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Lista la versión #${s.versionCode}", modifier = Modifier.weight(1f))
-                    Button(onClick = onInstall) { Text("Instalar") }
+                    Text(stringResource(R.string.ready_version, s.versionCode), modifier = Modifier.weight(1f))
+                    Button(onClick = onInstall) { Text(stringResource(R.string.install)) }
                 }
                 is UpdateState.Error -> Column {
                     Text(s.message, color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = onCheck) { Text("Reintentar") }
+                    TextButton(onClick = onCheck) { Text(stringResource(R.string.retry)) }
                 }
             }
         }
@@ -584,13 +625,13 @@ private fun HabitRow(
         ) {
             Text(habit.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             IconButton(onClick = onMoveUp, enabled = canMoveUp) {
-                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Subir")
+                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.move_up))
             }
             IconButton(onClick = onMoveDown, enabled = canMoveDown) {
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Bajar")
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.move_down))
             }
             IconButton(onClick = onArchive) {
-                Icon(Icons.Filled.Delete, contentDescription = "Quitar")
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.remove))
             }
         }
     }

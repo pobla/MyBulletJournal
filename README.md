@@ -2,6 +2,8 @@
 
 App Android (Kotlin + Jetpack Compose, Material 3, minSdk 26) para apuntar cosas cuando no tienes el bullet journal a mano y pasarlas luego al cuaderno.
 
+**Idiomas:** inglés (por defecto) y español. Sigue el idioma del móvil; en Android 13+ se puede elegir solo para esta app en *Ajustes → Idioma de la app*.
+
 ## Instalar en el móvil (sin ordenador)
 
 Cada push a GitHub compila un APK debug firmado (workflow `.github/workflows/android.yml`):

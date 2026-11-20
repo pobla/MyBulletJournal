@@ -51,12 +51,15 @@ import com.pobla.cuaderno.ui.week.WeekRoute
 import com.pobla.cuaderno.CuadernoApp
 import com.pobla.cuaderno.update.UpdateState
 import java.time.LocalDate
+import androidx.compose.ui.res.stringResource
+import com.pobla.cuaderno.R
+import androidx.annotation.StringRes
 
-private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
-    DAY("day", "Día", Icons.Filled.Create),
-    WEEK("week", "Semana", Icons.Filled.DateRange),
-    PENDING("pending", "Pendientes", Icons.AutoMirrored.Filled.List),
-    SETTINGS("settings", "Ajustes", Icons.Filled.Settings),
+private enum class Tab(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
+    DAY("day", R.string.tab_day, Icons.Filled.Create),
+    WEEK("week", R.string.tab_week, Icons.Filled.DateRange),
+    PENDING("pending", R.string.tab_pending, Icons.AutoMirrored.Filled.List),
+    SETTINGS("settings", R.string.tab_settings, Icons.Filled.Settings),
 }
 
 @Composable
@@ -110,7 +113,7 @@ fun AppRoot(requestedTab: String? = null, onTabHandled: () -> Unit = {}) {
                                     Icon(tab.icon, contentDescription = null)
                                 }
                             },
-                            label = { Text(tab.label) },
+                            label = { Text(stringResource(tab.labelRes)) },
                         )
                     }
                 }
@@ -158,26 +161,26 @@ private fun UpdatePrompt() {
         is UpdateState.Available -> if (updates.promptedVersion != s.versionCode) {
             AlertDialog(
                 onDismissRequest = { updates.promptedVersion = s.versionCode },
-                title = { Text("Nueva versión disponible") },
-                text = { Text("Hay una versión nueva (#${s.versionCode}). Se descarga aquí mismo y Android te pedirá confirmar la instalación.") },
+                title = { Text(stringResource(R.string.update_available_title)) },
+                text = { Text(stringResource(R.string.update_available_text, s.versionCode)) },
                 confirmButton = {
-                    Button(onClick = { updates.download() }) { Text("Actualizar") }
+                    Button(onClick = { updates.download() }) { Text(stringResource(R.string.update_action)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { updates.promptedVersion = s.versionCode }) { Text("Luego") }
+                    TextButton(onClick = { updates.promptedVersion = s.versionCode }) { Text(stringResource(R.string.later)) }
                 },
             )
         }
         is UpdateState.ReadyToInstall -> if (updates.promptedVersion != s.versionCode) {
             AlertDialog(
                 onDismissRequest = { updates.promptedVersion = s.versionCode },
-                title = { Text("Actualización descargada") },
-                text = { Text("Pulsa instalar. Si es la primera vez, Android te pedirá permitir instalar apps desde Cuaderno de bolsillo; actívalo, vuelve y pulsa instalar otra vez.") },
+                title = { Text(stringResource(R.string.update_downloaded_title)) },
+                text = { Text(stringResource(R.string.update_downloaded_text)) },
                 confirmButton = {
-                    Button(onClick = { updates.install(context) }) { Text("Instalar") }
+                    Button(onClick = { updates.install(context) }) { Text(stringResource(R.string.install)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { updates.promptedVersion = s.versionCode }) { Text("Luego") }
+                    TextButton(onClick = { updates.promptedVersion = s.versionCode }) { Text(stringResource(R.string.later)) }
                 },
             )
         }

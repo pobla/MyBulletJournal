@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cuaderno de bolsillo</string>
+
+    <!-- Navegación -->
+    <string name="tab_day">Día</string>
+    <string name="tab_week">Semana</string>
+    <string name="tab_pending">Pendientes</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <!-- Comunes -->
+    <string name="today">Hoy</string>
+    <string name="today_weekday">Hoy · %1$s</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="later">Luego</string>
+    <string name="quoted">“%1$s”</string>
+
+    <!-- Tipos de entrada y estados -->
+    <string name="entry_task">Tarea</string>
+    <string name="entry_event">Evento</string>
+    <string name="entry_note">Nota</string>
+    <string name="task_open">Pendiente</string>
+    <string name="task_done">Hecha</string>
+    <string name="task_migrated">Migrada</string>
+
+    <!-- Día -->
+    <string name="previous_day">Día anterior</string>
+    <string name="next_day">Día siguiente</string>
+    <string name="section_habits">Hábitos</string>
+    <string name="section_summary">Frase del día</string>
+    <string name="section_log">Registro</string>
+    <string name="day_empty_hint">Nada apuntado. Escribe abajo: \"o \" para evento, \"- \" para nota; si no, es una tarea. Toca el símbolo de una tarea para cambiar su estado. Desliza a los lados para cambiar de día.</string>
+    <string name="status_transcribed">Pasado al cuaderno ✓</string>
+    <string name="status_changed">Cambios sin pasar</string>
+    <string name="status_changed_hint">Lo resaltado es nuevo desde que lo pasaste</string>
+    <string name="status_pending">Pendiente de pasar al cuaderno</string>
+    <string name="action_unmark">Desmarcar</string>
+    <string name="action_mark_transcribed">Ya lo pasé</string>
+    <string name="no_habits">No hay hábitos activos. Añádelos en Ajustes.</string>
+    <string name="summary_placeholder">Una frase para resumir el día</string>
+    <string name="summary_changed">Cambiada desde que la pasaste</string>
+    <string name="input_placeholder">%1$s…  (o evento · - nota)</string>
+    <string name="add">Añadir</string>
+    <string name="edit_entry">Editar entrada</string>
+    <string name="delete_entry">Borrar entrada</string>
+
+    <!-- Semana -->
+    <string name="this_week">Esta semana</string>
+    <string name="week">Semana</string>
+    <string name="previous_week">Semana anterior</string>
+    <string name="next_week">Semana siguiente</string>
+    <string name="section_days">Días</string>
+    <string name="no_notes">Sin apuntes</string>
+    <string name="and_more">y %1$d más…</string>
+
+    <!-- Pendientes -->
+    <string name="pending_title">Pendientes de pasar</string>
+    <plurals name="days_count">
+        <item quantity="one">%d día</item>
+        <item quantity="many">%d días</item>
+        <item quantity="other">%d días</item>
+    </plurals>
+    <plurals name="entries_count">
+        <item quantity="one">%d entrada</item>
+        <item quantity="many">%d entradas</item>
+        <item quantity="other">%d entradas</item>
+    </plurals>
+    <plurals name="habits_count">
+        <item quantity="one">%d hábito</item>
+        <item quantity="many">%d hábitos</item>
+        <item quantity="other">%d hábitos</item>
+    </plurals>
+    <string name="all_transcribed">Todo pasado al cuaderno ✓</string>
+    <string name="mark_transcribed">Marcar como pasado</string>
+    <string name="only_summary">Solo frase del día o cambios borrados</string>
+    <string name="pill_done">✓ Pasado</string>
+    <string name="pill_changed">Cambios</string>
+    <string name="pill_pending">Pendiente</string>
+
+    <!-- Actualizaciones -->
+    <string name="update_available_title">Nueva versión disponible</string>
+    <string name="update_available_text">Hay una versión nueva (#%1$d). Se descarga aquí mismo y Android te pedirá confirmar la instalación.</string>
+    <string name="update_action">Actualizar</string>
+    <string name="update_downloaded_title">Actualización descargada</string>
+    <string name="update_downloaded_text">Pulsa instalar. Si es la primera vez, Android te pedirá permitir instalar apps desde Cuaderno de bolsillo; actívalo, vuelve y pulsa instalar otra vez.</string>
+    <string name="install">Instalar</string>
+    <string name="update_error_check">No se pudo comprobar: %1$s</string>
+    <string name="update_error_download">Falló la descarga: %1$s</string>
+    <string name="update_error_installer">No se encontró el instalador de paquetes</string>
+
+    <!-- Ajustes -->
+    <string name="settings_title">Ajustes</string>
+    <string name="section_daily_habits">Hábitos diarios</string>
+    <string name="habits_hint">Toca un hábito para renombrarlo. Al quitarlo se conserva lo que ya marcaste en días pasados.</string>
+    <string name="new_habit">Nuevo hábito</string>
+    <string name="add_habit">Añadir hábito</string>
+    <string name="rename_habit">Renombrar hábito</string>
+    <string name="remove_habit_title">Quitar “%1$s”</string>
+    <string name="remove_habit_text">Dejará de aparecer en los días nuevos. Lo que ya marcaste se conserva.</string>
+    <string name="remove">Quitar</string>
+    <string name="move_up">Subir</string>
+    <string name="move_down">Bajar</string>
+
+    <string name="section_reminders">Recordatorios</string>
+    <string name="notifications_blocked">Las notificaciones están bloqueadas: los recordatorios no se verán.</string>
+    <string name="allow">Permitir</string>
+    <string name="reminder_habits_title">Recordatorio de hábitos</string>
+    <string name="reminder_habits_desc">Solo avisa si te queda algún hábito sin marcar ese día.</string>
+    <string name="reminder_transcribe_title">Pasar al cuaderno</string>
+    <string name="reminder_transcribe_desc">Solo avisa si hay días pendientes de pasar al cuaderno.</string>
+    <string name="at_time">A las %1$s</string>
+    <string name="test">Probar</string>
+    <string name="days_all">Todos los días</string>
+    <string name="days_workdays">De lunes a viernes</string>
+    <string name="days_weekend">Fines de semana</string>
+
+    <string name="section_appearance">Apariencia</string>
+    <string name="dynamic_color_title">Colores del fondo de pantalla</string>
+    <string name="dynamic_color_desc">Como las apps de Pixel. Desactívalo para usar la paleta papel y tinta.</string>
+    <string name="language_title">Idioma de la app</string>
+    <string name="language_desc">Elige español o inglés solo para esta app.</string>
+    <string name="change">Cambiar</string>
+
+    <string name="section_updates">Actualizaciones</string>
+    <string name="installed_version">Versión instalada: %1$s</string>
+    <string name="updates_desc">Se comprueba sola una vez al día al abrir la app (release debug-latest de GitHub).</string>
+    <string name="check_updates">Buscar actualizaciones</string>
+    <string name="checking">Comprobando…</string>
+    <string name="up_to_date">Tienes la última versión ✓</string>
+    <string name="check_again">Volver a mirar</string>
+    <string name="new_version">Nueva versión #%1$d</string>
+    <string name="download">Descargar</string>
+    <string name="downloading">Descargando #%1$d… %2$d %%</string>
+    <string name="ready_version">Lista la versión #%1$d</string>
+    <string name="retry">Reintentar</string>
+
+    <!-- Notificaciones -->
+    <string name="channel_habits">Hábitos</string>
+    <string name="channel_habits_desc">Recordatorio diario de los hábitos sin marcar</string>
+    <string name="channel_transcribe">Pasar al cuaderno</string>
+    <string name="channel_transcribe_desc">Aviso de días pendientes de pasar al bullet journal</string>
+    <string name="notif_habits_title">¿Has hecho tus hábitos?</string>
+    <plurals name="notif_habits_missing">
+        <item quantity="one">Te falta: %1$s</item>
+        <item quantity="many">Te faltan: %1$s</item>
+        <item quantity="other">Te faltan: %1$s</item>
+    </plurals>
+    <plurals name="notif_transcribe_title">
+        <item quantity="one">%d día por pasar al cuaderno</item>
+        <item quantity="many">%d días por pasar al cuaderno</item>
+        <item quantity="other">%d días por pasar al cuaderno</item>
+    </plurals>
+    <string name="notif_and_more">y %1$d más</string>
+    <string name="test_prefix">(prueba)</string>
+
+    <string-array name="default_habits">
+        <item>Creatina</item>
+        <item>Vitamina D</item>
+        <item>Duolingo</item>
+        <item>Ejercicio</item>
+    </string-array>
+</resources>

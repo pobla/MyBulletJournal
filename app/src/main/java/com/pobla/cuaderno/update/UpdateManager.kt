@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
 import com.pobla.cuaderno.BuildConfig
+import com.pobla.cuaderno.R
 import com.pobla.cuaderno.data.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +78,7 @@ class UpdateManager(
                     UpdateState.UpToDate
                 }
             } catch (e: Exception) {
-                UpdateState.Error("No se pudo comprobar: ${e.message ?: e.javaClass.simpleName}")
+                UpdateState.Error(context.getString(R.string.update_error_check, e.message ?: e.javaClass.simpleName))
             }
         }
     }
@@ -95,7 +96,7 @@ class UpdateManager(
                 }
                 UpdateState.ReadyToInstall(available.versionCode)
             } catch (e: Exception) {
-                UpdateState.Error("Falló la descarga: ${e.message ?: e.javaClass.simpleName}")
+                UpdateState.Error(context.getString(R.string.update_error_download, e.message ?: e.javaClass.simpleName))
             }
         }
     }
@@ -123,7 +124,7 @@ class UpdateManager(
         try {
             activityContext.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            _state.value = UpdateState.Error("No se encontró el instalador de paquetes")
+            _state.value = UpdateState.Error(context.getString(R.string.update_error_installer))
         }
     }
 

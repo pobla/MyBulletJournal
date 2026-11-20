@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.pobla.cuaderno.R
 
 enum class TranscribeStatus { NONE, PENDING, CHANGED, DONE }
 
@@ -25,9 +27,12 @@ fun StatusPill(status: TranscribeStatus, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val (text, container, content) = when (status) {
         TranscribeStatus.NONE -> return
-        TranscribeStatus.DONE -> Triple("✓ Pasado", colors.secondaryContainer, colors.onSecondaryContainer)
-        TranscribeStatus.CHANGED -> Triple("Cambios", colors.tertiaryContainer, colors.onTertiaryContainer)
-        TranscribeStatus.PENDING -> Triple("Pendiente", colors.surfaceVariant, colors.onSurfaceVariant)
+        TranscribeStatus.DONE ->
+            Triple(stringResource(R.string.pill_done), colors.secondaryContainer, colors.onSecondaryContainer)
+        TranscribeStatus.CHANGED ->
+            Triple(stringResource(R.string.pill_changed), colors.tertiaryContainer, colors.onTertiaryContainer)
+        TranscribeStatus.PENDING ->
+            Triple(stringResource(R.string.pill_pending), colors.surfaceVariant, colors.onSurfaceVariant)
     }
     Surface(
         color = container,

@@ -1,19 +1,22 @@
 package com.pobla.cuaderno.model
 
+import androidx.annotation.StringRes
+import com.pobla.cuaderno.R
+
 /** Tipos de entrada del registro rápido de bullet journal. */
-enum class EntryType(val symbol: String, val label: String) {
-    TASK("•", "Tarea"),
-    EVENT("○", "Evento"),
-    NOTE("–", "Nota");
+enum class EntryType(val symbol: String, @StringRes val labelRes: Int) {
+    TASK("•", R.string.entry_task),
+    EVENT("○", R.string.entry_event),
+    NOTE("–", R.string.entry_note);
 
     fun next(): EntryType = entries[(ordinal + 1) % entries.size]
 }
 
 /** Estado de una tarea: • abierta → × hecha → > migrada → • abierta. */
-enum class TaskStatus(val symbol: String, val label: String) {
-    OPEN("•", "Pendiente"),
-    DONE("×", "Hecha"),
-    MIGRATED(">", "Migrada");
+enum class TaskStatus(val symbol: String, @StringRes val labelRes: Int) {
+    OPEN("•", R.string.task_open),
+    DONE("×", R.string.task_done),
+    MIGRATED(">", R.string.task_migrated);
 
     fun next(): TaskStatus = when (this) {
         OPEN -> DONE

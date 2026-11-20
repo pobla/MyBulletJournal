@@ -43,6 +43,11 @@ import com.pobla.cuaderno.ui.components.TranscribeStatus
 import com.pobla.cuaderno.util.longDate
 import com.pobla.cuaderno.util.weekdayDayMonth
 import java.time.LocalDate
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.pobla.cuaderno.R
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun PendingRoute(viewModel: PendingViewModel, onOpenDay: (LocalDate) -> Unit) {
@@ -62,13 +67,13 @@ fun PendingScreen(
                 title = {
                     Column {
                         Text(
-                            "Pendientes de pasar",
+                            stringResource(R.string.pending_title),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
                         if (state.days.isNotEmpty()) {
                             Text(
-                                if (state.days.size == 1) "1 día" else "${state.days.size} días",
+                                pluralStringResource(R.plurals.days_count, state.days.size, state.days.size),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -88,7 +93,7 @@ fun PendingScreen(
                     .padding(32.dp),
             ) {
                 Text(
-                    "Todo pasado al cuaderno ✓",
+                    stringResource(R.string.all_transcribed),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -139,7 +144,7 @@ private fun PendingDayCard(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (day.isToday) "Hoy · ${day.date.weekdayDayMonth()}" else day.date.weekdayDayMonth(),
+                        if (day.isToday) stringResource(R.string.today_weekday, day.date.weekdayDayMonth()) else day.date.weekdayDayMonth(),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     if (day.hasChanges) {
@@ -153,13 +158,13 @@ private fun PendingDayCard(
                     color = colors.onSurfaceVariant,
                 )
                 Text(
-                    detailsText(day),
+                    detailsText(LocalContext.current, day),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 if (day.summary.isNotBlank()) {
                     Text(
-                        "“${day.summary}”",
+                        stringResource(R.string.quoted, day.summary),
                         style = MaterialTheme.typography.bodyMedium,
                         fontStyle = FontStyle.Italic,
                         color = colors.onSurfaceVariant,
@@ -172,16 +177,17 @@ private fun PendingDayCard(
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 onMarkTranscribed()
             }) {
-                Icon(Icons.Filled.Check, contentDescription = "Marcar como pasado")
+                Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.mark_transcribed))
             }
         }
     }
 }
 
-private fun detailsText(day: PendingDayUi): String {
+private fun detailsText(context: Context, day: PendingDayUi): String {
+    val res = context.resources
     val parts = buildList {
-        if (day.entryCount > 0) add(if (day.entryCount == 1) "1 entrada" else "${day.entryCount} entradas")
-        if (day.habitCount > 0) add(if (day.habitCount == 1) "1 hábito" else "${day.habitCount} hábitos")
+        if (day.entryCount > 0) add(res.getQuantityString(R.plurals.entries_count, day.entryCount, day.entryCount))
+        if (day.habitCount > 0) add(res.getQuantityString(R.plurals.habits_count, day.habitCount, day.habitCount))
     }
-    return if (parts.isEmpty()) "Solo frase del día o cambios borrados" else parts.joinToString(" · ")
+    return if (parts.isEmpty()) context.getString(R.string.only_summary) else parts.joinToString(" · ")
 }

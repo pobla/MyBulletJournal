@@ -71,6 +71,8 @@ import com.pobla.cuaderno.util.weekRangeLabel
 import com.pobla.cuaderno.util.weekdayDayMonth
 import com.pobla.cuaderno.util.weekdayLetter
 import java.time.LocalDate
+import androidx.compose.ui.res.stringResource
+import com.pobla.cuaderno.R
 
 private const val MAX_ENTRIES_PREVIEW = 6
 
@@ -105,7 +107,7 @@ fun WeekScreen(
                 title = {
                     Column {
                         Text(
-                            if (state.isCurrentWeek) "Esta semana" else "Semana",
+                            stringResource(if (state.isCurrentWeek) R.string.this_week else R.string.week),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -118,7 +120,7 @@ fun WeekScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onPrevious) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Semana anterior")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.previous_week))
                     }
                 },
                 actions = {
@@ -129,10 +131,10 @@ fun WeekScreen(
                         exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
                             scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
                     ) {
-                        FilledTonalButton(onClick = onThisWeek) { Text("Hoy") }
+                        FilledTonalButton(onClick = onThisWeek) { Text(stringResource(R.string.today)) }
                     }
                     IconButton(onClick = onNext) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Semana siguiente")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.next_week))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -162,12 +164,12 @@ fun WeekScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (state.habits.isNotEmpty() && state.days.isNotEmpty()) {
-                item(key = "habits_title") { SectionTitle("Hábitos") }
+                item(key = "habits_title") { SectionTitle(stringResource(R.string.section_habits)) }
                 item(key = "habits") {
                     HabitGrid(state = state, onToggle = onToggleHabit)
                 }
             }
-            item(key = "days_title") { SectionTitle("Días") }
+            item(key = "days_title") { SectionTitle(stringResource(R.string.section_days)) }
             items(state.days, key = { it.date.toEpochDay() }) { day ->
                 WeekDayCard(day = day, onClick = { onOpenDay(day.date) })
             }
@@ -305,7 +307,7 @@ private fun WeekDayCard(day: WeekDayUi, onClick: () -> Unit) {
             }
             if (day.summary.isNotBlank()) {
                 Text(
-                    "“${day.summary}”",
+                    stringResource(R.string.quoted, day.summary),
                     style = MaterialTheme.typography.bodyMedium,
                     fontStyle = FontStyle.Italic,
                     color = colors.onSurfaceVariant,
@@ -314,7 +316,7 @@ private fun WeekDayCard(day: WeekDayUi, onClick: () -> Unit) {
             }
             if (day.entries.isEmpty() && day.summary.isBlank()) {
                 Text(
-                    "Sin apuntes",
+                    stringResource(R.string.no_notes),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),
@@ -353,7 +355,7 @@ private fun WeekDayCard(day: WeekDayUi, onClick: () -> Unit) {
             }
             if (day.entries.size > MAX_ENTRIES_PREVIEW) {
                 Text(
-                    "y ${day.entries.size - MAX_ENTRIES_PREVIEW} más…",
+                    stringResource(R.string.and_more, day.entries.size - MAX_ENTRIES_PREVIEW),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, start = 20.dp),

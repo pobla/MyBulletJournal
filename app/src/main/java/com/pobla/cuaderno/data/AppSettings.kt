@@ -1,14 +1,20 @@
 package com.pobla.cuaderno.data
 
 import android.content.Context
+import androidx.annotation.StringRes
+import com.pobla.cuaderno.R
 import java.time.DayOfWeek
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class ReminderKind(val title: String, val defaultMinutes: Int) {
-    HABITS("Recordatorio de hábitos", 21 * 60),
-    TRANSCRIBE("Pasar al cuaderno", 21 * 60 + 30),
+enum class ReminderKind(
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
+    val defaultMinutes: Int,
+) {
+    HABITS(R.string.reminder_habits_title, R.string.reminder_habits_desc, 21 * 60),
+    TRANSCRIBE(R.string.reminder_transcribe_title, R.string.reminder_transcribe_desc, 21 * 60 + 30),
 }
 
 val ALL_DAYS: Set<DayOfWeek> = DayOfWeek.values().toSet()
@@ -26,18 +32,6 @@ data class ReminderSetting(
     val hour: Int get() = minutesOfDay / 60
     val minute: Int get() = minutesOfDay % 60
     val label: String get() = "%02d:%02d".format(hour, minute)
-
-    val daysLabel: String
-        get() = when (days) {
-            ALL_DAYS -> "Todos los días"
-            WORKDAYS -> "De lunes a viernes"
-            WEEKEND -> "Fines de semana"
-            else -> days.sorted().joinToString(", ") { DAY_NAMES[it.value - 1] }
-        }
-
-    private companion object {
-        val DAY_NAMES = listOf("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
-    }
 }
 
 /** Días como máscara de bits (lunes = bit 0) para guardarlos en preferencias. */

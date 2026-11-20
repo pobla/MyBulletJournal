@@ -21,13 +21,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun journalDao(): JournalDao
 
     companion object {
-        val DEFAULT_HABITS = listOf("Creatina", "Vitamina D", "Duolingo", "Ejercicio")
-
-        fun build(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "cuaderno.db")
+        fun build(context: Context): AppDatabase {
+            // Hábitos iniciales en el idioma del móvil al instalar.
+            val defaultHabits = context.resources.getStringArray(com.pobla.cuaderno.R.array.default_habits)
+            return Room.databaseBuilder(context, AppDatabase::class.java, "cuaderno.db")
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
-                        DEFAULT_HABITS.forEachIndexed { index, name ->
+                        defaultHabits.forEachIndexed { index, name ->
                             db.execSQL(
                                 "INSERT INTO habits (name, position, archived) VALUES (?, ?, 0)",
                                 arrayOf<Any?>(name, index),
@@ -36,5 +36,6 @@ abstract class AppDatabase : RoomDatabase() {
                     }
                 })
                 .build()
+        }
     }
 }

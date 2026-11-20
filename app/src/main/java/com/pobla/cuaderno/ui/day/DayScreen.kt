@@ -103,6 +103,8 @@ import com.pobla.cuaderno.ui.components.SectionTitle
 import com.pobla.cuaderno.util.formatTimestamp
 import com.pobla.cuaderno.util.longDate
 import com.pobla.cuaderno.util.weekdayName
+import androidx.compose.ui.res.stringResource
+import com.pobla.cuaderno.R
 
 @Composable
 fun DayRoute(viewModel: DayViewModel = viewModel(factory = DayViewModel.Factory)) {
@@ -158,7 +160,7 @@ fun DayScreen(
                         val isToday = date == java.time.LocalDate.now()
                         Column {
                             Text(
-                                text = if (isToday) "Hoy · ${date.weekdayName()}" else date.weekdayName(),
+                                text = if (isToday) stringResource(R.string.today_weekday, date.weekdayName()) else date.weekdayName(),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -172,7 +174,7 @@ fun DayScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onPrevious) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Día anterior")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.previous_day))
                     }
                 },
                 actions = {
@@ -181,10 +183,10 @@ fun DayScreen(
                         enter = fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.fastSpatialSpec()),
                         exit = fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.fastSpatialSpec()),
                     ) {
-                        FilledTonalButton(onClick = onToday) { Text("Hoy") }
+                        FilledTonalButton(onClick = onToday) { Text(stringResource(R.string.today)) }
                     }
                     IconButton(onClick = onNext) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Día siguiente")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.next_day))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -290,19 +292,17 @@ private fun DayContent(
             TranscribedCard(state = state, onSetTranscribed = onSetTranscribed)
         }
 
-        item(key = "habits_title") { SectionTitle("Hábitos") }
+        item(key = "habits_title") { SectionTitle(stringResource(R.string.section_habits)) }
         item(key = "habits") { HabitsRow(habits = state.habits, onToggle = onToggleHabit) }
 
-        item(key = "summary_title") { SectionTitle("Frase del día") }
+        item(key = "summary_title") { SectionTitle(stringResource(R.string.section_summary)) }
         item(key = "summary") { SummaryField(state = state, onChange = onSummaryChange) }
 
-        item(key = "log_title") { SectionTitle("Registro") }
+        item(key = "log_title") { SectionTitle(stringResource(R.string.section_log)) }
         if (state.loaded && state.entries.isEmpty()) {
             item(key = "empty") {
                 Text(
-                    text = "Nada apuntado. Escribe abajo: \"o \" para evento, \"- \" para nota; " +
-                        "si no, es una tarea. Toca el símbolo de una tarea para cambiar su estado. " +
-                        "Desliza a los lados para cambiar de día.",
+                    text = stringResource(R.string.day_empty_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -376,20 +376,20 @@ private fun TranscribedCard(state: DayUiState, onSetTranscribed: (Boolean) -> Un
                     Column {
                         when (status) {
                             0 -> {
-                                Text("Pasado al cuaderno ✓", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.status_transcribed), style = MaterialTheme.typography.titleMedium)
                                 state.lastTranscribedAt?.let {
                                     Text(formatTimestamp(it), style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                             1 -> {
-                                Text("Cambios sin pasar", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.status_changed), style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Lo resaltado es nuevo desde que lo pasaste",
+                                    stringResource(R.string.status_changed_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
                             else -> Text(
-                                "Pendiente de pasar al cuaderno",
+                                stringResource(R.string.status_pending),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                         }
@@ -397,12 +397,12 @@ private fun TranscribedCard(state: DayUiState, onSetTranscribed: (Boolean) -> Un
                 }
                 Spacer(Modifier.width(8.dp))
                 if (state.transcribed) {
-                    TextButton(onClick = { onSetTranscribed(false) }) { Text("Desmarcar") }
+                    TextButton(onClick = { onSetTranscribed(false) }) { Text(stringResource(R.string.action_unmark)) }
                 } else {
                     Button(onClick = {
                         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                         onSetTranscribed(true)
-                    }) { Text("Ya lo pasé") }
+                    }) { Text(stringResource(R.string.action_mark_transcribed)) }
                 }
             }
         }
@@ -413,7 +413,7 @@ private fun TranscribedCard(state: DayUiState, onSetTranscribed: (Boolean) -> Un
 private fun HabitsRow(habits: List<HabitUi>, onToggle: (Long) -> Unit) {
     if (habits.isEmpty()) {
         Text(
-            "No hay hábitos activos. Añádelos en Ajustes.",
+            stringResource(R.string.no_habits),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -477,7 +477,7 @@ private fun SummaryField(state: DayUiState, onChange: (String) -> Unit) {
             draft = it
             onChange(it)
         },
-        placeholder = { Text("Una frase para resumir el día") },
+        placeholder = { Text(stringResource(R.string.summary_placeholder)) },
         modifier = Modifier.fillMaxWidth(),
         maxLines = 4,
         shape = MaterialTheme.shapes.large,
@@ -485,7 +485,7 @@ private fun SummaryField(state: DayUiState, onChange: (String) -> Unit) {
             if (state.summaryChanged) colors.tertiaryContainer else colors.surfaceContainerHigh,
         ),
         supportingText = if (state.summaryChanged) {
-            { Text("Cambiada desde que la pasaste", color = colors.tertiary) }
+            { Text(stringResource(R.string.summary_changed), color = colors.tertiary) }
         } else {
             null
         },
@@ -619,7 +619,7 @@ private fun EntryInputBar(onAdd: (EntryType, String) -> Unit) {
                         text = value
                     }
                 },
-                placeholder = { Text("${type.label}…  (o evento · - nota)") },
+                placeholder = { Text(stringResource(R.string.input_placeholder, stringResource(type.labelRes))) },
                 modifier = Modifier.weight(1f),
                 maxLines = 4,
                 shape = MaterialTheme.shapes.extraLarge,
@@ -632,7 +632,7 @@ private fun EntryInputBar(onAdd: (EntryType, String) -> Unit) {
             )
             Spacer(Modifier.width(8.dp))
             FilledIconButton(onClick = { submit() }, enabled = text.isNotBlank()) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Añadir")
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.add))
             }
         }
     }
@@ -652,7 +652,7 @@ private fun EditEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar entrada") },
+        title = { Text(stringResource(R.string.edit_entry)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -670,7 +670,7 @@ private fun EditEntryDialog(
                         FilterChip(
                             selected = type == option,
                             onClick = { type = option },
-                            label = { Text("${option.symbol} ${option.label}") },
+                            label = { Text("${option.symbol} ${stringResource(option.labelRes)}") },
                             shape = CircleShape,
                         )
                     }
@@ -681,14 +681,14 @@ private fun EditEntryDialog(
                             FilterChip(
                                 selected = status == option,
                                 onClick = { status = option },
-                                label = { Text("${option.symbol} ${option.label}") },
+                                label = { Text("${option.symbol} ${stringResource(option.labelRes)}") },
                                 shape = CircleShape,
                             )
                         }
                     }
                 }
                 TextButton(onClick = onDelete) {
-                    Text("Borrar entrada", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete_entry), color = MaterialTheme.colorScheme.error)
                 }
             }
         },
@@ -696,10 +696,10 @@ private fun EditEntryDialog(
             Button(
                 onClick = { onSave(type, status, text.trim()) },
                 enabled = text.isNotBlank(),
-            ) { Text("Guardar") }
+            ) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }

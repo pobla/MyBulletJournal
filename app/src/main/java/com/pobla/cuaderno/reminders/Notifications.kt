@@ -13,6 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.pobla.cuaderno.MainActivity
 import com.pobla.cuaderno.R
+import com.pobla.cuaderno.data.ReminderKind
 import com.pobla.cuaderno.util.weekdayDayMonth
 import java.time.LocalDate
 
@@ -31,12 +32,16 @@ object Notifications {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannels(
             listOf(
-                NotificationChannel(CHANNEL_HABITS, "Hábitos", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Recordatorio diario de los hábitos sin marcar"
-                },
-                NotificationChannel(CHANNEL_TRANSCRIBE, "Pasar al cuaderno", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Aviso de días pendientes de pasar al bullet journal"
-                },
+                NotificationChannel(
+                    CHANNEL_HABITS,
+                    context.getString(R.string.channel_habits),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply { description = context.getString(R.string.channel_habits_desc) },
+                NotificationChannel(
+                    CHANNEL_TRANSCRIBE,
+                    context.getString(R.string.channel_transcribe),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply { description = context.getString(R.string.channel_transcribe_desc) },
             ),
         )
     }
@@ -50,21 +55,27 @@ object Notifications {
     }
 
     fun showHabits(context: Context, missing: List<String>) {
-        val text = if (missing.size == 1) "Te falta: ${missing.first()}" else "Te faltan: ${missing.joinToString(", ")}"
+        val text = context.resources.getQuantityString(
+            R.plurals.notif_habits_missing,
+            missing.size,
+            missing.joinToString(", "),
+        )
         notify(
             context = context,
             id = ID_HABITS,
             channel = CHANNEL_HABITS,
-            title = "¿Has hecho tus hábitos?",
+            title = context.getString(R.string.notif_habits_title),
             text = text,
             tab = TAB_DAY,
         )
     }
 
     fun showTranscribe(context: Context, dates: List<LocalDate>) {
-        val title = if (dates.size == 1) "1 día por pasar al cuaderno" else "${dates.size} días por pasar al cuaderno"
+        val title = context.resources.getQuantityString(R.plurals.notif_transcribe_title, dates.size, dates.size)
         val lines = dates.take(6).map { it.weekdayDayMonth() }
-        val text = lines.joinToString(" · ") + if (dates.size > lines.size) " y ${dates.size - lines.size} más" else ""
+        val more = dates.size - lines.size
+        val text = lines.joinToString(" · ") +
+            if (more > 0) " " + context.getString(R.string.notif_and_more, more) else ""
         notify(
             context = context,
             id = ID_TRANSCRIBE,
@@ -76,11 +87,13 @@ object Notifications {
     }
 
     /** Aviso de prueba desde Ajustes, con datos de ejemplo. */
-    fun showTest(context: Context, kind: com.pobla.cuaderno.data.ReminderKind) {
+    fun showTest(context: Context, kind: ReminderKind) {
         when (kind) {
-            com.pobla.cuaderno.data.ReminderKind.HABITS ->
-                showHabits(context, listOf("(prueba) Creatina", "Duolingo"))
-            com.pobla.cuaderno.data.ReminderKind.TRANSCRIBE ->
+            ReminderKind.HABITS -> {
+                val sample = context.resources.getStringArray(R.array.default_habits).take(2)
+                showHabits(context, listOf("${context.getString(R.string.test_prefix)} ${sample[0]}", sample[1]))
+            }
+            ReminderKind.TRANSCRIBE ->
                 showTranscribe(context, listOf(LocalDate.now().minusDays(1), LocalDate.now()))
         }
     }

@@ -1,43 +1,48 @@
 package com.pobla.cuaderno.util
 
+import android.text.format.DateFormat
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
-val SPANISH: Locale = Locale.forLanguageTag("es-ES")
+// Los formatos se crean con el idioma actual (inglés o español) en cada llamada,
+// para que un cambio de idioma se note sin reiniciar la app.
+private val locale: Locale get() = Locale.getDefault()
 
-private val weekdayFormat = DateTimeFormatter.ofPattern("EEEE", SPANISH)
-private val longDateFormat = DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", SPANISH)
-private val timestampFormat = DateTimeFormatter.ofPattern("d MMM, HH:mm", SPANISH)
+/** Formato adecuado al idioma a partir de un "esqueleto" (p. ej. "dMMMM" → "20 de noviembre" / "November 20"). */
+private fun best(skeleton: String): DateTimeFormatter =
+    DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
 
-fun LocalDate.weekdayName(): String =
-    format(weekdayFormat).replaceFirstChar { it.titlecase(SPANISH) }
+private fun String.capitalized(): String = replaceFirstChar { it.titlecase(locale) }
 
-fun LocalDate.longDate(): String = format(longDateFormat)
+/** "Viernes" / "Friday" */
+fun LocalDate.weekdayName(): String = dayOfWeek.getDisplayName(TextStyle.FULL, locale).capitalized()
+
+/** "20 de noviembre de 2026" / "November 20, 2026" */
+fun LocalDate.longDate(): String = format(best("dMMMMyyyy"))
 
 fun formatTimestamp(epochMillis: Long): String =
-    Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(timestampFormat)
+    Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(best("dMMMHHmm"))
 
-private val dayMonthFormat = DateTimeFormatter.ofPattern("d 'de' MMMM", SPANISH)
-private val shortDayMonthFormat = DateTimeFormatter.ofPattern("d MMM", SPANISH)
+/** "Lunes 16 de noviembre" / "Monday, November 16" */
+fun LocalDate.weekdayDayMonth(): String = format(best("EEEEdMMMM")).capitalized()
 
-/** "Lunes 16 de noviembre" */
-fun LocalDate.weekdayDayMonth(): String = "${weekdayName()} ${format(dayMonthFormat)}"
+/** Inicial del día: L M X J V S D / M T W T F S S. */
+fun LocalDate.weekdayLetter(): String = dayOfWeek.letter()
 
-/** Inicial del día de la semana en español: L M X J V S D. */
-fun LocalDate.weekdayLetter(): String = "LMXJVSD"[dayOfWeek.value - 1].toString()
+fun DayOfWeek.letter(): String = getDisplayName(TextStyle.NARROW, locale).uppercase(locale)
+
+fun DayOfWeek.shortName(): String = getDisplayName(TextStyle.SHORT, locale)
 
 /** Lunes de la semana de esta fecha. */
 fun LocalDate.startOfWeek(): LocalDate = minusDays((dayOfWeek.value - 1).toLong())
 
-/** "16 – 22 de noviembre" o "28 oct – 3 nov". */
+/** "16 nov – 22 nov" / "Nov 16 – Nov 22" */
 fun weekRangeLabel(start: LocalDate): String {
-    val end = start.plusDays(6)
-    return if (start.month == end.month) {
-        "${start.dayOfMonth} – ${end.format(dayMonthFormat)}"
-    } else {
-        "${start.format(shortDayMonthFormat)} – ${end.format(shortDayMonthFormat)}"
-    }
+    val f = best("dMMM")
+    return "${start.format(f)} – ${start.plusDays(6).format(f)}"
 }
