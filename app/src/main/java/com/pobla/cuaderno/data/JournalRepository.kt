@@ -64,6 +64,15 @@ class JournalRepository(
 
     fun observeActiveHabits(): Flow<List<HabitEntity>> = dao.observeActiveHabits()
 
+    // Para los recordatorios
+    suspend fun getPendingDays(): List<PendingDayRow> = dao.getPendingDays()
+
+    /** Nombres de los hábitos activos que no se han marcado en [date]. */
+    suspend fun getMissingHabits(date: LocalDate): List<String> {
+        val done = dao.getHabitChecks(date.toEpochDay()).filter { it.done }.map { it.habitId }.toSet()
+        return dao.getActiveHabits().filter { it.id !in done }.map { it.name }
+    }
+
     // Gestión de hábitos (no afecta a "pasado al cuaderno")
     suspend fun addHabit(name: String) = db.withTransaction {
         dao.insertHabit(HabitEntity(name = name, position = dao.nextHabitPosition()))

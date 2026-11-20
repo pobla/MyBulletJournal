@@ -2,7 +2,14 @@
 
 package com.pobla.cuaderno.ui.settings
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -43,7 +50,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,9 +66,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pobla.cuaderno.data.ReminderKind
+import com.pobla.cuaderno.data.ReminderSetting
 import com.pobla.cuaderno.data.db.HabitEntity
+import com.pobla.cuaderno.reminders.Notifications
 import com.pobla.cuaderno.ui.components.SectionTitle
 import com.pobla.cuaderno.update.UpdateState
 
@@ -68,9 +82,44 @@ fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsVie
     val habits by viewModel.habits.collectAsStateWithLifecycle()
     val dynamicColor by viewModel.dynamicColor.collectAsStateWithLifecycle()
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
+    val reminders by viewModel.reminders.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Estado del permiso de notificaciones; se refresca al volver a la app (p. ej. desde Ajustes del sistema).
+    var notificationsAllowed by remember { mutableStateOf(Notifications.canNotify(context)) }
+    LifecycleResumeEffect(Unit) {
+        notificationsAllowed = Notifications.canNotify(context)
+        onPauseOrDispose { }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { notificationsAllowed = Notifications.canNotify(context) }
+
+    fun ensureNotificationPermission() {
+        if (Notifications.canNotify(context)) return
+        val needsRuntimePermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        if (needsRuntimePermission) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            openNotificationSettings(context)
+        }
+    }
+
     SettingsScreen(
         habits = habits,
+        reminders = reminders,
+        notificationsAllowed = notificationsAllowed,
+        onReminderEnabledChange = { kind, enabled ->
+            viewModel.setReminderEnabled(kind, enabled)
+            if (enabled) ensureNotificationPermission()
+        },
+        onReminderTimeChange = viewModel::setReminderTime,
+        onTestReminder = { kind ->
+            if (Notifications.canNotify(context)) Notifications.showTest(context, kind) else ensureNotificationPermission()
+        },
+        onOpenNotificationSettings = { openNotificationSettings(context) },
         dynamicColor = dynamicColor,
         updateState = updateState,
         versionName = viewModel.updates.currentVersionName,
@@ -85,9 +134,26 @@ fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsVie
     )
 }
 
+private fun openNotificationSettings(context: Context) {
+    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    } else {
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(android.net.Uri.parse("package:${context.packageName}"))
+    }
+    context.startActivity(intent)
+}
+
 @Composable
 fun SettingsScreen(
     habits: List<HabitEntity>,
+    reminders: Map<ReminderKind, ReminderSetting>,
+    notificationsAllowed: Boolean,
+    onReminderEnabledChange: (ReminderKind, Boolean) -> Unit,
+    onReminderTimeChange: (ReminderKind, Int, Int) -> Unit,
+    onTestReminder: (ReminderKind) -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     dynamicColor: Boolean,
     updateState: UpdateState,
     versionName: String,
@@ -101,6 +167,7 @@ fun SettingsScreen(
     onInstallUpdate: () -> Unit,
 ) {
     var renaming by remember { mutableStateOf<HabitEntity?>(null) }
+    var pickingTime by remember { mutableStateOf<ReminderKind?>(null) }
     var archiving by remember { mutableStateOf<HabitEntity?>(null) }
     var newHabit by rememberSaveable { mutableStateOf("") }
 
@@ -176,6 +243,42 @@ fun SettingsScreen(
                 }
             }
 
+            item(key = "reminders_title") { SectionTitle("Recordatorios") }
+            if (!notificationsAllowed && reminders.values.any { it.enabled }) {
+                item(key = "reminders_blocked") {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        shape = MaterialTheme.shapes.large,
+                        modifier = Modifier.fillMaxWidth().animateItem(),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                        ) {
+                            Text(
+                                "Las notificaciones están bloqueadas: los recordatorios no se verán.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = onOpenNotificationSettings) { Text("Permitir") }
+                        }
+                    }
+                }
+            }
+            ReminderKind.entries.forEach { kind ->
+                val setting = reminders[kind] ?: ReminderSetting(false, kind.defaultMinutes)
+                item(key = "reminder_${kind.name}") {
+                    ReminderCard(
+                        kind = kind,
+                        setting = setting,
+                        onEnabledChange = { onReminderEnabledChange(kind, it) },
+                        onPickTime = { pickingTime = kind },
+                        onTest = { onTestReminder(kind) },
+                    )
+                }
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 item(key = "look_title") { SectionTitle("Apariencia") }
                 item(key = "dynamic") {
@@ -236,6 +339,27 @@ fun SettingsScreen(
         )
     }
 
+    pickingTime?.let { kind ->
+        val setting = reminders[kind] ?: ReminderSetting(false, kind.defaultMinutes)
+        val timeState = rememberTimePickerState(
+            initialHour = setting.hour,
+            initialMinute = setting.minute,
+            is24Hour = true,
+        )
+        AlertDialog(
+            onDismissRequest = { pickingTime = null },
+            title = { Text(kind.title) },
+            text = { TimePicker(state = timeState) },
+            confirmButton = {
+                Button(onClick = {
+                    onReminderTimeChange(kind, timeState.hour, timeState.minute)
+                    pickingTime = null
+                }) { Text("Guardar") }
+            },
+            dismissButton = { TextButton(onClick = { pickingTime = null }) { Text("Cancelar") } },
+        )
+    }
+
     archiving?.let { habit ->
         AlertDialog(
             onDismissRequest = { archiving = null },
@@ -249,6 +373,46 @@ fun SettingsScreen(
             },
             dismissButton = { TextButton(onClick = { archiving = null }) { Text("Cancelar") } },
         )
+    }
+}
+
+@Composable
+private fun ReminderCard(
+    kind: ReminderKind,
+    setting: ReminderSetting,
+    onEnabledChange: (Boolean) -> Unit,
+    onPickTime: () -> Unit,
+    onTest: () -> Unit,
+) {
+    val description = when (kind) {
+        ReminderKind.HABITS -> "Solo avisa si te queda algún hábito sin marcar ese día."
+        ReminderKind.TRANSCRIBE -> "Solo avisa si hay días pendientes de pasar al cuaderno."
+    }
+    SettingsCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(kind.title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = setting.enabled, onCheckedChange = onEnabledChange)
+        }
+        if (setting.enabled) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                FilledTonalButton(onClick = onPickTime) {
+                    Text("Cada día a las ${setting.label}")
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onTest) { Text("Probar") }
+            }
+        }
     }
 }
 

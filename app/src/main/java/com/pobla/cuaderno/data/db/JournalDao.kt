@@ -8,6 +8,21 @@ import androidx.room.Update
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
+/** Días con algo apuntado (o cambios) que no están marcados como pasados al cuaderno. */
+const val PENDING_DAYS_QUERY = """
+    SELECT * FROM (
+        SELECT d.epochDay AS epochDay,
+               d.summary AS summary,
+               d.lastTranscribedAt AS lastTranscribedAt,
+               (SELECT COUNT(*) FROM entries e WHERE e.epochDay = d.epochDay) AS entryCount,
+               (SELECT COUNT(*) FROM habit_checks h WHERE h.epochDay = d.epochDay AND h.done = 1) AS habitCount
+        FROM days d
+        WHERE d.transcribed = 0
+    )
+    WHERE entryCount > 0 OR habitCount > 0 OR TRIM(summary) != '' OR lastTranscribedAt IS NOT NULL
+    ORDER BY epochDay
+"""
+
 @Dao
 interface JournalDao {
 
@@ -51,22 +66,14 @@ interface JournalDao {
     fun observeHabitChecksInRange(from: Long, to: Long): Flow<List<HabitCheckEntity>>
 
     // Pendientes de pasar al cuaderno
-    @Query(
-        """
-        SELECT * FROM (
-            SELECT d.epochDay AS epochDay,
-                   d.summary AS summary,
-                   d.lastTranscribedAt AS lastTranscribedAt,
-                   (SELECT COUNT(*) FROM entries e WHERE e.epochDay = d.epochDay) AS entryCount,
-                   (SELECT COUNT(*) FROM habit_checks h WHERE h.epochDay = d.epochDay AND h.done = 1) AS habitCount
-            FROM days d
-            WHERE d.transcribed = 0
-        )
-        WHERE entryCount > 0 OR habitCount > 0 OR TRIM(summary) != '' OR lastTranscribedAt IS NOT NULL
-        ORDER BY epochDay
-        """,
-    )
+    @Query(PENDING_DAYS_QUERY)
     fun observePendingDays(): Flow<List<PendingDayRow>>
+
+    @Query(PENDING_DAYS_QUERY)
+    suspend fun getPendingDays(): List<PendingDayRow>
+
+    @Query("SELECT * FROM habit_checks WHERE epochDay = :epochDay")
+    suspend fun getHabitChecks(epochDay: Long): List<HabitCheckEntity>
 
     // Hábitos
     @Query("SELECT * FROM habits WHERE archived = 0 ORDER BY position, id")

@@ -29,6 +29,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
@@ -59,7 +60,7 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
 }
 
 @Composable
-fun AppRoot() {
+fun AppRoot(requestedTab: String? = null, onTabHandled: () -> Unit = {}) {
     val navController = rememberNavController()
     // Compartidos a nivel de actividad: el día se abre desde Semana/Pendientes
     // y el número de pendientes se muestra en la barra inferior.
@@ -76,6 +77,16 @@ fun AppRoot() {
     }
 
     val motion = MaterialTheme.motionScheme
+
+    // Abrir la pestaña que pide una notificación (hábitos → hoy; cuaderno → pendientes).
+    val navReady = backStackEntry != null
+    LaunchedEffect(requestedTab, navReady) {
+        if (!navReady) return@LaunchedEffect
+        val route = requestedTab ?: return@LaunchedEffect
+        if (route == Tab.DAY.route) dayViewModel.today()
+        if (Tab.entries.any { it.route == route }) navController.navigateToTab(route)
+        onTabHandled()
+    }
 
     UpdatePrompt()
 

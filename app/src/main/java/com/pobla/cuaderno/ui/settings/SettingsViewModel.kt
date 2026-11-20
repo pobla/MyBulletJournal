@@ -8,6 +8,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.pobla.cuaderno.CuadernoApp
 import com.pobla.cuaderno.data.AppSettings
 import com.pobla.cuaderno.data.JournalRepository
+import com.pobla.cuaderno.data.ReminderKind
+import com.pobla.cuaderno.data.ReminderSetting
+import com.pobla.cuaderno.reminders.ReminderScheduler
 import com.pobla.cuaderno.data.db.HabitEntity
 import com.pobla.cuaderno.update.UpdateManager
 import com.pobla.cuaderno.update.UpdateState
@@ -22,7 +25,20 @@ class SettingsViewModel(
     private val appScope: CoroutineScope,
     private val settings: AppSettings,
     val updates: UpdateManager,
+    private val scheduler: ReminderScheduler,
 ) : ViewModel() {
+
+    val reminders: StateFlow<Map<ReminderKind, ReminderSetting>> = settings.reminders
+
+    fun setReminderEnabled(kind: ReminderKind, enabled: Boolean) {
+        settings.setReminder(kind, settings.reminder(kind).copy(enabled = enabled))
+        scheduler.reschedule(kind)
+    }
+
+    fun setReminderTime(kind: ReminderKind, hour: Int, minute: Int) {
+        settings.setReminder(kind, settings.reminder(kind).copy(minutesOfDay = hour * 60 + minute))
+        scheduler.reschedule(kind)
+    }
 
     val dynamicColor: StateFlow<Boolean> = settings.dynamicColor
     val updateState: StateFlow<UpdateState> = updates.state
@@ -63,6 +79,7 @@ class SettingsViewModel(
                     appScope = app.container.appScope,
                     settings = app.container.settings,
                     updates = app.container.updates,
+                    scheduler = app.container.reminders,
                 )
             }
         }

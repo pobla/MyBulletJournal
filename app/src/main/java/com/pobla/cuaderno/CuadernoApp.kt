@@ -4,6 +4,8 @@ import android.app.Application
 import com.pobla.cuaderno.data.AppSettings
 import com.pobla.cuaderno.data.JournalRepository
 import com.pobla.cuaderno.data.db.AppDatabase
+import com.pobla.cuaderno.reminders.Notifications
+import com.pobla.cuaderno.reminders.ReminderScheduler
 import com.pobla.cuaderno.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +21,7 @@ class AppContainer(app: Application) {
 
     val settings = AppSettings(app)
     val updates = UpdateManager(app, settings, appScope)
+    val reminders = ReminderScheduler(app, settings)
 }
 
 class CuadernoApp : Application() {
@@ -28,5 +31,6 @@ class CuadernoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        Notifications.createChannels(this)
     }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono monocromo para la barra de estado: cuaderno con un punto de tarea -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M6,2h12a2,2 0,0 1,2 2v16a2,2 0,0 1,-2 2H6a2,2 0,0 1,-2 -2V4a2,2 0,0 1,2 -2zM7,4v16h11V4H7zM10,8.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM13,9.25h3.5v1.5H13zM9,14h7.5v1.5H9z" />
+</vector>

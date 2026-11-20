@@ -26,7 +26,7 @@ Desde la versión #5, la app comprueba **una vez al día al abrirse** si hay un 
 | 2 | Vista semanal, lista de días pendientes, edición de hábitos, navegación inferior | ✅ |
 | 2.5 | Estilo Material 3 Expressive, colores del fondo de pantalla (Android 12+), animaciones, deslizar entre días, actualizador integrado | ✅ |
 | 3 | Fotos desde cámara o galería (por entrada o por día) | ⏳ |
-| 4 | Notificaciones con WorkManager (hábitos y pasar al cuaderno), permisos Android 13+ | ⏳ |
+| 4 | Notificaciones con WorkManager (hábitos y pasar al cuaderno), permisos Android 13+ | ✅ |
 
 ## Uso rápido
 
@@ -35,6 +35,7 @@ Desde la versión #5, la app comprueba **una vez al día al abrirse** si hay un 
 - Toca el **texto** de una entrada para editarla, cambiar su tipo/estado o borrarla.
 - **Semana**: rejilla de hábitos (se puede marcar directamente) y resumen de cada día; toca un día para abrirlo.
 - **Pendientes**: días con apuntes sin pasar al cuaderno, del más antiguo al más reciente. ✓ los marca como pasados.
+- **Recordatorios** (Ajustes): uno para hábitos y otro para pasar al cuaderno, a la hora que elijas. Solo avisan si hace falta (te falta algún hábito / hay días pendientes). Tocar la notificación abre el día o la lista de pendientes.
 - **Ajustes**: añadir, renombrar, reordenar y quitar hábitos (se conserva el historial).
 - "Ya lo pasé" marca el día como pasado al cuaderno. Si después cambias algo, vuelve a pendiente y lo nuevo se resalta en naranja.
 
