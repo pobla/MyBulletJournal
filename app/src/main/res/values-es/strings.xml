@@ -201,4 +201,6 @@
     <string name="widget_settings_title">Widget de la pantalla de inicio</string>
     <string name="widget_settings_desc">Ve las tareas de hoy y añade una directamente desde la pantalla de inicio.</string>
     <string name="widget_settings_action">Añadir widget</string>
+    <string name="quick_widget_name">Añadir tarea</string>
+    <string name="quick_widget_description">Un botón de 1×1 para apuntar una tarea sin abrir la app</string>
 </resources>

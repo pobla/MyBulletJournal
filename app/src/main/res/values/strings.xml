@@ -194,4 +194,6 @@
     <string name="widget_settings_title">Home screen widget</string>
     <string name="widget_settings_desc">See today\'s tasks and add one straight from the home screen.</string>
     <string name="widget_settings_action">Add widget</string>
+    <string name="quick_widget_name">Add task</string>
+    <string name="quick_widget_description">A 1×1 button to jot down a task without opening the app</string>
 </resources>

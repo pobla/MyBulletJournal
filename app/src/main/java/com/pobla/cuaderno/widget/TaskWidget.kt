@@ -4,14 +4,17 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
@@ -45,8 +48,15 @@ import java.time.LocalDate
 
 private data class WidgetEntry(val id: Long, val symbol: String, val text: String)
 
-/** Widget "Hoy": tareas y eventos de hoy, y botones para añadir sin abrir la app. */
+/**
+ * Widget "Hoy". Se adapta al tamaño:
+ * - 1×1: un botón + para añadir una tarea.
+ * - Una fila (p. ej. 4×1): pendientes de hoy, + Tarea, ○ y –.
+ * - Dos filas o más: además, la lista de lo pendiente hoy.
+ */
 class TaskWidget : GlanceAppWidget() {
+
+    override val sizeMode = SizeMode.Responsive(setOf(SMALL, ROW, LARGE))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val today = LocalDate.now()
@@ -59,10 +69,26 @@ class TaskWidget : GlanceAppWidget() {
 
         provideContent {
             GlanceTheme {
-                WidgetContent(context, title, entries)
+                val size = LocalSize.current
+                when {
+                    size.width >= ROW.width && size.height >= LARGE.height -> WidgetContent(context, title, entries)
+                    size.width >= ROW.width -> RowContent(context, entries.size)
+                    else -> SmallContent(context)
+                }
             }
         }
     }
+
+    companion object {
+        private val SMALL = DpSize(40.dp, 40.dp)
+        private val ROW = DpSize(160.dp, 40.dp)
+        private val LARGE = DpSize(160.dp, 100.dp)
+    }
+}
+
+/** Mismo widget, pero en el selector aparece como "Añadir tarea" y se coloca en 1×1. */
+class QuickAddWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = TaskWidget()
 }
 
 class TaskWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -178,14 +204,86 @@ private fun WidgetContent(context: Context, title: String, entries: List<WidgetE
     }
 }
 
+/** 1×1: solo un botón + redondo. */
 @Composable
-private fun RoundButton(context: Context, type: EntryType) {
+private fun SmallContent(context: Context) {
     val colors = GlanceTheme.colors
     Box(
         contentAlignment = Alignment.Center,
         modifier = GlanceModifier
-            .size(44.dp)
-            .cornerRadius(22.dp)
+            .fillMaxSize()
+            .appWidgetBackground()
+            .cornerRadius(100.dp)
+            .background(colors.primaryContainer)
+            .clickable(actionStartActivity(quickAddIntent(context, EntryType.TASK))),
+    ) {
+        Text(
+            text = "+",
+            style = TextStyle(color = colors.onPrimaryContainer, fontSize = 28.sp, fontWeight = FontWeight.Bold),
+        )
+    }
+}
+
+/** Una fila: contador de pendientes (abre el día), + Tarea, ○ y –. */
+@Composable
+private fun RowContent(context: Context, pending: Int) {
+    val colors = GlanceTheme.colors
+    val wide = LocalSize.current.width >= 220.dp
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .appWidgetBackground()
+            .cornerRadius(100.dp)
+            .background(colors.widgetBackground)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+    ) {
+        if (wide) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = GlanceModifier
+                    .size(40.dp)
+                    .cornerRadius(20.dp)
+                    .background(colors.surfaceVariant)
+                    .clickable(actionStartActivity(openDayIntent(context))),
+            ) {
+                Text(
+                    text = "$pending",
+                    style = TextStyle(color = colors.onSurfaceVariant, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                )
+            }
+            Spacer(GlanceModifier.width(6.dp))
+        }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = GlanceModifier
+                .defaultWeight()
+                .height(40.dp)
+                .cornerRadius(20.dp)
+                .background(colors.primary)
+                .clickable(actionStartActivity(quickAddIntent(context, EntryType.TASK))),
+        ) {
+            Text(
+                text = context.getString(R.string.widget_add_task),
+                style = TextStyle(color = colors.onPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                maxLines = 1,
+            )
+        }
+        Spacer(GlanceModifier.width(6.dp))
+        RoundButton(context, EntryType.EVENT, 40)
+        Spacer(GlanceModifier.width(6.dp))
+        RoundButton(context, EntryType.NOTE, 40)
+    }
+}
+
+@Composable
+private fun RoundButton(context: Context, type: EntryType, sizeDp: Int = 44) {
+    val colors = GlanceTheme.colors
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = GlanceModifier
+            .size(sizeDp.dp)
+            .cornerRadius((sizeDp / 2).dp)
             .background(colors.secondaryContainer)
             .clickable(actionStartActivity(quickAddIntent(context, type))),
     ) {
