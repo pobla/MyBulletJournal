@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+
 package com.pobla.cuaderno.ui.pending
 
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,7 +50,6 @@ fun PendingRoute(viewModel: PendingViewModel, onOpenDay: (LocalDate) -> Unit) {
     PendingScreen(state = state, onOpenDay = onOpenDay, onMarkTranscribed = viewModel::markTranscribed)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PendingScreen(
     state: PendingUiState,
@@ -56,7 +61,11 @@ fun PendingScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Pendientes de pasar", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "Pendientes de pasar",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                         if (state.days.isNotEmpty()) {
                             Text(
                                 if (state.days.size == 1) "1 día" else "${state.days.size} días",
@@ -101,6 +110,7 @@ fun PendingScreen(
                     day = day,
                     onClick = { onOpenDay(day.date) },
                     onMarkTranscribed = { onMarkTranscribed(day.date) },
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -108,16 +118,22 @@ fun PendingScreen(
 }
 
 @Composable
-private fun PendingDayCard(day: PendingDayUi, onClick: () -> Unit, onMarkTranscribed: () -> Unit) {
+private fun PendingDayCard(
+    day: PendingDayUi,
+    onClick: () -> Unit,
+    onMarkTranscribed: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
     Surface(
         onClick = onClick,
-        color = colors.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
+        color = colors.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -152,7 +168,10 @@ private fun PendingDayCard(day: PendingDayUi, onClick: () -> Unit, onMarkTranscr
                     )
                 }
             }
-            FilledTonalIconButton(onClick = onMarkTranscribed) {
+            FilledTonalIconButton(onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                onMarkTranscribed()
+            }) {
                 Icon(Icons.Filled.Check, contentDescription = "Marcar como pasado")
             }
         }

@@ -1,5 +1,18 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+
 package com.pobla.cuaderno.ui.week
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +35,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +51,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,7 +90,6 @@ fun WeekRoute(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeekScreen(
     state: WeekUiState,
@@ -88,7 +106,8 @@ fun WeekScreen(
                     Column {
                         Text(
                             if (state.isCurrentWeek) "Esta semana" else "Semana",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             weekRangeLabel(state.weekStart),
@@ -103,8 +122,14 @@ fun WeekScreen(
                     }
                 },
                 actions = {
-                    if (!state.isCurrentWeek) {
-                        TextButton(onClick = onThisWeek) { Text("Hoy") }
+                    AnimatedVisibility(
+                        visible = !state.isCurrentWeek,
+                        enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                            scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
+                        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
+                    ) {
+                        FilledTonalButton(onClick = onThisWeek) { Text("Hoy") }
                     }
                     IconButton(onClick = onNext) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Semana siguiente")
@@ -114,6 +139,19 @@ fun WeekScreen(
             )
         },
     ) { padding ->
+        val motion = MaterialTheme.motionScheme
+        AnimatedContent(
+            targetState = state,
+            contentKey = { it.weekStart },
+            transitionSpec = {
+                val dir = if (targetState.weekStart > initialState.weekStart) 1 else -1
+                (slideInHorizontally(motion.defaultSpatialSpec()) { w -> dir * w / 3 } + fadeIn(motion.defaultEffectsSpec()))
+                    .togetherWith(
+                        slideOutHorizontally(motion.defaultSpatialSpec()) { w -> -dir * w / 3 } + fadeOut(motion.fastEffectsSpec()),
+                    )
+            },
+            label = "semana",
+        ) { state ->
         LazyColumn(
             contentPadding = PaddingValues(
                 start = 16.dp,
@@ -134,15 +172,17 @@ fun WeekScreen(
                 WeekDayCard(day = day, onClick = { onOpenDay(day.date) })
             }
         }
+        }
     }
 }
 
 @Composable
 private fun HabitGrid(state: WeekUiState, onToggle: (LocalDate, Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
     Surface(
-        color = colors.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
+        color = colors.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(vertical = 8.dp, horizontal = 8.dp)) {
@@ -184,35 +224,59 @@ private fun HabitGrid(state: WeekUiState, onToggle: (LocalDate, Long) -> Unit) {
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(36.dp)
-                                .clickable { onToggle(day.date, habit.id) },
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .then(
-                                        if (done) {
-                                            Modifier.background(colors.primary)
-                                        } else {
-                                            Modifier.border(BorderStroke(1.dp, colors.outlineVariant), CircleShape)
-                                        },
-                                    ),
-                            ) {
-                                if (done) {
-                                    Text(
-                                        "✓",
-                                        color = colors.onPrimary,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        textAlign = TextAlign.Center,
+                                .height(40.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    haptics.performHapticFeedback(
+                                        if (done) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
                                     )
-                                }
-                            }
+                                    onToggle(day.date, habit.id)
+                                },
+                        ) {
+                            HabitDot(done = done)
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/** Círculo de la rejilla: se rellena con un pequeño rebote al marcarlo. */
+@Composable
+private fun HabitDot(done: Boolean) {
+    val colors = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+    val fill by animateColorAsState(
+        if (done) colors.primary else Color.Transparent,
+        animationSpec = motion.fastEffectsSpec(),
+        label = "relleno",
+    )
+    val scale by animateFloatAsState(
+        if (done) 1f else 0.85f,
+        animationSpec = motion.fastSpatialSpec(),
+        label = "escala",
+    )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(26.dp)
+            .scale(scale)
+            .clip(CircleShape)
+            .background(fill)
+            .border(BorderStroke(1.dp, if (done) Color.Transparent else colors.outlineVariant), CircleShape),
+    ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = done,
+            enter = scaleIn(motion.fastSpatialSpec()) + fadeIn(motion.fastEffectsSpec()),
+            exit = scaleOut(motion.fastSpatialSpec()) + fadeOut(motion.fastEffectsSpec()),
+        ) {
+            Text(
+                "✓",
+                color = colors.onPrimary,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -224,12 +288,12 @@ private fun WeekDayCard(day: WeekDayUi, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
-        color = colors.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
+        color = if (day.isToday) colors.primaryContainer.copy(alpha = 0.35f) else colors.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
         border = if (day.isToday) BorderStroke(1.5.dp, colors.primary) else null,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     day.date.weekdayDayMonth(),
