@@ -1,10 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Icono monocromo para la barra de estado: cuaderno con un punto de tarea -->
+<!-- Icono monocromo de la barra de estado (mismo dibujo que el de la app) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M6,2h12a2,2 0,0 1,2 2v16a2,2 0,0 1,-2 2H6a2,2 0,0 1,-2 -2V4a2,2 0,0 1,2 -2zM7,4v16h11V4H7zM10,8.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM13,9.25h3.5v1.5H13zM9,14h7.5v1.5H9z" />
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.95"
+        android:scaleY="1.95">
+        <path
+            android:pathData="M41,29 h28 a7,7 0 0 1 7,7 v36 a7,7 0 0 1 -7,7 h-28 a7,7 0 0 1 -7,-7 v-36 a7,7 0 0 1 7,-7 z"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3.5" />
+        <path
+            android:pathData="M43,29 v50"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.5" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M47.3,43 a3.2,3.2 0 1 0 6.4,0 a3.2,3.2 0 1 0 -6.4,0 z" />
+        <path
+            android:pathData="M47.6,54 a2.9,2.9 0 1 0 5.8,0 a2.9,2.9 0 1 0 -5.8,0"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.2" />
+        <path
+            android:pathData="M47.5,65 h6"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M58,43 h11"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M58,54 h9"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M58,65 h7"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+    </group>
 </vector>

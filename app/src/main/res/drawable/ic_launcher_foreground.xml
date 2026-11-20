@@ -1,24 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Cuaderno con tres líneas: • tarea, ○ evento, – nota -->
+<!-- Icono a color: cuaderno con • tarea, ○ evento (naranja) y – nota -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#3E5A7A"
-        android:pathData="M36,30h36a4,4 0,0 1,4 4v40a4,4 0,0 1,-4 4h-36a4,4 0,0 1,-4 -4v-40a4,4 0,0 1,4 -4z" />
-    <path android:fillColor="#FBF8F1"
-        android:pathData="M40,34h30a2,2 0,0 1,2 2v36a2,2 0,0 1,-2 2h-30z" />
-    <path android:fillColor="#3E5A7A"
-        android:pathData="M47,44m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
-    <path android:fillColor="#3E5A7A"
-        android:pathData="M53,43h14v2h-14z" />
-    <path android:fillColor="#00000000" android:strokeColor="#B4502C" android:strokeWidth="1.6"
-        android:pathData="M47,54m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
-    <path android:fillColor="#3E5A7A"
-        android:pathData="M53,53h12v2h-12z" />
-    <path android:fillColor="#3E5A7A"
-        android:pathData="M44.5,63h5v2h-5z" />
-    <path android:fillColor="#3E5A7A"
-        android:pathData="M53,63h10v2h-10z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.22"
+        android:scaleY="1.22">
+        <path
+            android:pathData="M41,29 h28 a7,7 0 0 1 7,7 v36 a7,7 0 0 1 -7,7 h-28 a7,7 0 0 1 -7,-7 v-36 a7,7 0 0 1 7,-7 z"
+            android:strokeColor="#FF3E5A7A"
+            android:strokeWidth="3.5" />
+        <path
+            android:pathData="M43,29 v50"
+            android:strokeColor="#FF3E5A7A"
+            android:strokeWidth="2.5" />
+        <path
+            android:fillColor="#FF3E5A7A"
+            android:pathData="M47.3,43 a3.2,3.2 0 1 0 6.4,0 a3.2,3.2 0 1 0 -6.4,0 z" />
+        <path
+            android:pathData="M47.6,54 a2.9,2.9 0 1 0 5.8,0 a2.9,2.9 0 1 0 -5.8,0"
+            android:strokeColor="#FFB4502C"
+            android:strokeWidth="2.2" />
+        <path
+            android:pathData="M47.5,65 h6"
+            android:strokeColor="#FF3E5A7A"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M58,43 h11"
+            android:strokeColor="#FF3E5A7A"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M58,54 h9"
+            android:strokeColor="#FF3E5A7A"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M58,65 h7"
+            android:strokeColor="#FF3E5A7A"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+    </group>
 </vector>
