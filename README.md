@@ -14,12 +14,17 @@ Todas las compilaciones se firman con la misma clave debug (`keystore/debug.keys
 
 También puedes lanzar una compilación a mano: *Actions* → *APK debug* → *Run workflow*.
 
+### Actualizaciones automáticas
+
+Desde la versión #5, la app comprueba **una vez al día al abrirse** si hay un APK más nuevo en la release `debug-latest` y lo ofrece. Se descarga dentro de la app y Android pide confirmar la instalación (la primera vez, también permitir "instalar apps desconocidas" para Cuaderno de bolsillo). También se puede buscar a mano en *Ajustes → Actualizaciones*. Requiere que el repo sea público.
+
 ## Fases
 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
 | 1 | Estructura, workflow, Room, pantalla del día (navegación, hábitos, registro •○–, frase del día, "pasado al cuaderno" con resaltado de cambios) | ✅ |
 | 2 | Vista semanal, lista de días pendientes, edición de hábitos, navegación inferior | ✅ |
+| 2.5 | Estilo Material 3 Expressive, colores del fondo de pantalla (Android 12+), animaciones, deslizar entre días, actualizador integrado | ✅ |
 | 3 | Fotos desde cámara o galería (por entrada o por día) | ⏳ |
 | 4 | Notificaciones con WorkManager (hábitos y pasar al cuaderno), permisos Android 13+ | ⏳ |
 
