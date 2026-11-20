@@ -20,6 +20,15 @@ También puedes lanzar una compilación a mano: *Actions* → *APK debug* → *R
 
 Desde la versión #5, la app comprueba **una vez al día al abrirse** si hay un APK más nuevo en la release `debug-latest` y lo ofrece. Se descarga dentro de la app y Android pide confirmar la instalación (la primera vez, también permitir "instalar apps desconocidas" para Cuaderno de bolsillo). También se puede buscar a mano en *Ajustes → Actualizaciones*. Requiere que el repo sea público.
 
+### Notas de versión
+
+El workflow genera `changelog.tsv` a partir de los mensajes de commit (título + líneas que empiezan por `- ` del cuerpo; se omiten los commits "README…"). Va dentro del APK y adjunto a la release:
+- El aviso de actualización muestra qué trae la versión nueva respecto a la instalada.
+- Tras actualizar, el diálogo **Novedades** enseña los cambios desde la versión anterior (aunque te saltes alguna).
+- *Ajustes → Actualizaciones → Ver novedades* para volver a verlas.
+
+Por eso conviene escribir los commits pensando en que son las notas de versión.
+
 ## Fases
 
 | Fase | Contenido | Estado |

@@ -78,6 +78,15 @@ class AppSettings(context: Context) {
         days = daysFromMask(prefs.getInt("reminder_${kind.name}_days", ALL_DAYS.toMask())),
     )
 
+    /** Última versión abierta (para mostrar "Novedades" una sola vez tras actualizar). */
+    var lastSeenVersionCode: Int
+        get() = prefs.getInt("last_seen_version", 0)
+        set(value) = prefs.edit().putInt("last_seen_version", value).apply()
+
+    var lastSeenCommitTime: Long
+        get() = prefs.getLong("last_seen_commit_time", 0L)
+        set(value) = prefs.edit().putLong("last_seen_commit_time", value).apply()
+
     var lastUpdateCheck: Long
         get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, value).apply()

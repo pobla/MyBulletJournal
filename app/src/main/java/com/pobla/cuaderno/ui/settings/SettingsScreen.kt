@@ -90,6 +90,9 @@ import com.pobla.cuaderno.data.WORKDAYS
 import com.pobla.cuaderno.data.WEEKEND
 import com.pobla.cuaderno.util.letter
 import com.pobla.cuaderno.util.shortName
+import com.pobla.cuaderno.BuildConfig
+import com.pobla.cuaderno.update.ReleaseNotes
+import com.pobla.cuaderno.ui.components.WhatsNewDialog
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
@@ -559,7 +562,22 @@ private fun UpdatesCard(
 ) {
     val motion = MaterialTheme.motionScheme
     SettingsCard {
-        Text(stringResource(R.string.installed_version, versionName), style = MaterialTheme.typography.titleMedium)
+        var showNotes by remember { mutableStateOf(false) }
+        val context = LocalContext.current
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.installed_version, versionName),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { showNotes = true }) { Text(stringResource(R.string.whats_new_button)) }
+        }
+        if (showNotes) {
+            val notes = remember {
+                ReleaseNotes.between(ReleaseNotes.bundled(context), 0, BuildConfig.COMMIT_TIME).take(10)
+            }
+            WhatsNewDialog(versionName, notes, onDismiss = { showNotes = false })
+        }
         Text(
             stringResource(R.string.updates_desc),
             style = MaterialTheme.typography.bodySmall,

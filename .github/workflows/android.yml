@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Historial para generar las notas de versión
+          fetch-depth: 100
 
       - uses: actions/setup-java@v5
         with:
@@ -24,21 +27,52 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      # Notas de versión a partir de los commits: van dentro del APK (diálogo "Novedades")
+      # y como adjunto de la release (para el aviso de actualización).
+      - name: Generar notas de versión
+        run: |
+          mkdir -p app/src/main/assets
+          python3 - <<'PY'
+          import subprocess
+          out = subprocess.check_output(
+              ["git", "log", "-n", "60", "--no-merges", "--format=%ct%x1f%s%x1f%b%x1e"], text=True)
+          lines = []
+          for rec in out.split("\x1e"):
+              if not rec.strip():
+                  continue
+              t, subject, body = rec.strip("\n").split("\x1f", 2)
+              subject = subject.strip()
+              if subject.lower().startswith("readme"):
+                  continue
+              lines.append(f"{t.strip()}\tS\t{subject}")
+              for line in body.splitlines():
+                  line = line.strip()
+                  if line.startswith("- "):
+                      lines.append(f"{t.strip()}\tB\t{line[2:].strip()}")
+          with open("app/src/main/assets/changelog.tsv", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines) + "\n")
+          PY
+          head -5 app/src/main/assets/changelog.tsv
+
       - name: Tests unitarios y APK debug
         run: |
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug -PversionCode=${{ github.run_number }} --stacktrace
+          ./gradlew testDebugUnitTest assembleDebug \
+            -PversionCode=${{ github.run_number }} \
+            -PcommitTime=$(git log -1 --format=%ct) \
+            --stacktrace
 
       - name: Renombrar APK
         run: |
           mkdir -p out
           cp app/build/outputs/apk/debug/app-debug.apk "out/cuaderno-de-bolsillo-${{ github.run_number }}.apk"
+          cp app/src/main/assets/changelog.tsv out/changelog.tsv
 
       - name: Subir artefacto
         uses: actions/upload-artifact@v5
         with:
           name: cuaderno-de-bolsillo-debug-${{ github.run_number }}
-          path: out/*.apk
+          path: out/*
           retention-days: 30
 
       # Release "debug-latest": enlace fijo y fácil de descargar desde el móvil.
@@ -47,7 +81,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete debug-latest --yes --cleanup-tag || true
-          gh release create debug-latest out/*.apk \
+          gh release create debug-latest out/*.apk out/changelog.tsv \
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "Cuaderno de bolsillo · debug #${{ github.run_number }}" \

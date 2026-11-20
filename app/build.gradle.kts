@@ -6,6 +6,8 @@ plugins {
 
 // En CI se pasa -PversionCode=<número de ejecución> para que cada APK actualice al anterior.
 val ciVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+// Fecha (epoch s) del commit compilado: sirve para filtrar las notas de versión.
+val ciCommitTime = (project.findProperty("commitTime") as String?)?.toLongOrNull() ?: 0L
 
 android {
     namespace = "com.pobla.cuaderno"
@@ -22,6 +24,7 @@ android {
         targetSdk = 36
         versionCode = ciVersionCode
         versionName = "0.1.$ciVersionCode"
+        buildConfigField("long", "COMMIT_TIME", "${ciCommitTime}L")
     }
 
     signingConfigs {

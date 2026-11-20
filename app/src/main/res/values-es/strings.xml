@@ -183,4 +183,11 @@
     <string name="import_copy_prompt">Copiar instrucciones para Claude</string>
     <string name="import_prompt_copied">Instrucciones copiadas: pégalas en Claude y comparte aquí la respuesta</string>
     <string name="import_prompt">Convierte lo que te diga en una lista de bullet journal. Una línea por elemento, empezando por: • para una tarea, ○ para un evento, – para una nota, × para algo ya hecho (incluidos hábitos como Creatina). Si algo es de otro día, pon antes una línea solo con la fecha (Hoy, Mañana, Lunes o 2026-11-23). Sin ningún otro texto.</string>
+
+    <!-- Notas de versión -->
+    <string name="whats_new_title">Novedades</string>
+    <string name="whats_new_in">Novedades de la versión %1$s</string>
+    <string name="whats_new_button">Ver novedades</string>
+    <string name="whats_new_update_header">Qué trae:</string>
+    <string name="got_it">Entendido</string>
 </resources>

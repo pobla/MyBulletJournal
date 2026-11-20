@@ -176,4 +176,11 @@
     <string name="import_copy_prompt">Copy instructions for Claude</string>
     <string name="import_prompt_copied">Instructions copied: paste them in Claude, then share the reply here</string>
     <string name="import_prompt">Turn what I tell you into a bullet journal list. One line per item, starting with: • for a task, ○ for an event, – for a note, × for something already done (including habits like Creatine). If something is for another day, put a line with just the date before it (Today, Tomorrow, Monday or 2026-11-23). No other text.</string>
+
+    <!-- Release notes -->
+    <string name="whats_new_title">What's new</string>
+    <string name="whats_new_in">What's new in version %1$s</string>
+    <string name="whats_new_button">See what's new</string>
+    <string name="whats_new_update_header">What it brings:</string>
+    <string name="got_it">Got it</string>
 </resources>

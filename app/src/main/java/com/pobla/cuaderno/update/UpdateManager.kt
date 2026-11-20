@@ -30,7 +30,13 @@ sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
     data object UpToDate : UpdateState
-    data class Available(val versionCode: Int, val downloadUrl: String, val sizeBytes: Long) : UpdateState
+    data class Available(
+        val versionCode: Int,
+        val downloadUrl: String,
+        val sizeBytes: Long,
+        /** Qué trae respecto a la versión instalada (vacío si no se pudieron leer las notas). */
+        val notes: List<ReleaseNote> = emptyList(),
+    ) : UpdateState
     data class Downloading(val versionCode: Int, val progress: Float) : UpdateState
     data class ReadyToInstall(val versionCode: Int) : UpdateState
     data class Error(val message: String) : UpdateState
@@ -73,7 +79,17 @@ class UpdateManager(
                 val release = withContext(Dispatchers.IO) { fetchLatestRelease() }
                 settings.lastUpdateCheck = System.currentTimeMillis()
                 if (release != null && release.versionCode > currentVersionCode) {
-                    UpdateState.Available(release.versionCode, release.url, release.size)
+                    val notes = release.notesUrl?.let { url ->
+                        runCatching {
+                            withContext(Dispatchers.IO) { ReleaseNotes.parse(downloadText(url)) }
+                        }.getOrDefault(emptyList())
+                    }.orEmpty()
+                    UpdateState.Available(
+                        release.versionCode,
+                        release.url,
+                        release.size,
+                        ReleaseNotes.between(notes, afterTime = BuildConfig.COMMIT_TIME),
+                    )
                 } else {
                     UpdateState.UpToDate
                 }
@@ -132,7 +148,7 @@ class UpdateManager(
         if (_state.value !is UpdateState.Downloading) _state.value = UpdateState.Idle
     }
 
-    private data class Release(val versionCode: Int, val url: String, val size: Long)
+    private data class Release(val versionCode: Int, val url: String, val size: Long, val notesUrl: String? = null)
 
     private fun fetchLatestRelease(): Release? {
         val connection = (URL(RELEASE_API).openConnection() as HttpURLConnection).apply {
@@ -149,15 +165,32 @@ class UpdateManager(
             val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
             val assets = json.getJSONArray("assets")
             var best: Release? = null
+            var notesUrl: String? = null
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
+                if (asset.getString("name") == NOTES_ASSET) notesUrl = asset.getString("browser_download_url")
                 val match = APK_NAME.matchEntire(asset.getString("name")) ?: continue
                 val code = match.groupValues[1].toInt()
                 if (best == null || code > best.versionCode) {
                     best = Release(code, asset.getString("browser_download_url"), asset.optLong("size", -1))
                 }
             }
-            return best
+            return best?.copy(notesUrl = notesUrl)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun downloadText(url: String): String {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "CuadernoDeBolsillo")
+        }
+        try {
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) error("HTTP ${connection.responseCode}")
+            return connection.inputStream.bufferedReader().use { it.readText() }
         } finally {
             connection.disconnect()
         }
@@ -206,6 +239,7 @@ class UpdateManager(
 
     private companion object {
         const val RELEASE_API = "https://api.github.com/repos/pobla/MyBulletJournal/releases/tags/debug-latest"
+        const val NOTES_ASSET = "changelog.tsv"
         val APK_NAME = Regex("""cuaderno-de-bolsillo-(\d+)\.apk""")
         const val ONE_DAY_MS = 24L * 60 * 60 * 1000
     }

@@ -60,6 +60,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.pobla.cuaderno.ui.importer.ImportDialog
+import com.pobla.cuaderno.BuildConfig
+import com.pobla.cuaderno.update.ReleaseNotes
+import com.pobla.cuaderno.ui.components.ReleaseNotesList
+import com.pobla.cuaderno.ui.components.WhatsNewDialog
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.unit.dp
+import com.pobla.cuaderno.update.ReleaseNote
+import android.content.Context
 
 private enum class Tab(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
     DAY("day", R.string.tab_day, Icons.Filled.Create),
@@ -103,6 +112,7 @@ fun AppRoot(
     }
 
     UpdatePrompt()
+    WhatsNewAfterUpdate()
 
     // Importar texto: llega compartido desde otra app o se abre desde el menú del día.
     val context = LocalContext.current
@@ -187,6 +197,48 @@ private fun NavController.navigateToTab(route: String) {
 }
 
 /**
+ * La primera vez que se abre una versión nueva, muestra lo que ha cambiado desde la
+ * versión que había instalada (aunque se haya saltado alguna). En una instalación nueva no.
+ */
+@Composable
+private fun WhatsNewAfterUpdate() {
+    val context = LocalContext.current
+    val notes = WhatsNewState.notes ?: computeWhatsNew(context).also {
+        WhatsNewState.notes = it
+        WhatsNewState.visible = it.isNotEmpty()
+    }
+    if (WhatsNewState.visible) {
+        WhatsNewDialog(BuildConfig.VERSION_NAME, notes, onDismiss = { WhatsNewState.visible = false })
+    }
+}
+
+/** Se calcula una sola vez por proceso (sobrevive a girar la pantalla). */
+private object WhatsNewState {
+    var notes: List<ReleaseNote>? = null
+    var visible by mutableStateOf(false)
+}
+
+private fun computeWhatsNew(context: Context): List<ReleaseNote> {
+    val settings = (context.applicationContext as CuadernoApp).container.settings
+    val current = BuildConfig.VERSION_CODE
+    val previousVersion = settings.lastSeenVersionCode
+    val previousCommitTime = settings.lastSeenCommitTime
+    settings.lastSeenVersionCode = current
+    settings.lastSeenCommitTime = BuildConfig.COMMIT_TIME
+
+    val info = context.packageManager.getPackageInfo(context.packageName, 0)
+    val freshInstall = info.firstInstallTime == info.lastUpdateTime
+    val all = ReleaseNotes.bundled(context)
+    return when {
+        current <= previousVersion -> emptyList()
+        previousVersion == 0 && freshInstall -> emptyList()
+        // Actualización desde una versión sin notas: enseñamos los últimos cambios.
+        previousCommitTime == 0L -> ReleaseNotes.between(all, 0, BuildConfig.COMMIT_TIME).take(5)
+        else -> ReleaseNotes.between(all, previousCommitTime, BuildConfig.COMMIT_TIME)
+    }
+}
+
+/**
  * Si la comprobación diaria encuentra una versión nueva, la ofrece una vez.
  * El progreso de la descarga y el botón "Instalar" se ven también en Ajustes.
  */
@@ -201,7 +253,19 @@ private fun UpdatePrompt() {
             AlertDialog(
                 onDismissRequest = { updates.promptedVersion = s.versionCode },
                 title = { Text(stringResource(R.string.update_available_title)) },
-                text = { Text(stringResource(R.string.update_available_text, s.versionCode)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.update_available_text, s.versionCode))
+                        if (s.notes.isNotEmpty()) {
+                            Text(
+                                stringResource(R.string.whats_new_update_header),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                            )
+                            ReleaseNotesList(s.notes)
+                        }
+                    }
+                },
                 confirmButton = {
                     Button(onClick = { updates.download() }) { Text(stringResource(R.string.update_action)) }
                 },
