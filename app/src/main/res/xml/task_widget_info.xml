@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget "Hoy": por defecto una fila de 4 celdas; redimensionable de 1×1 a lo que quieras -->
+<!-- Widget "Hoy": una sola fila (4×1 por defecto), solo se estira a lo ancho -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_description"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:minWidth="250dp"
     android:minHeight="40dp"
-    android:minResizeWidth="40dp"
+    android:minResizeWidth="180dp"
     android:minResizeHeight="40dp"
     android:previewImage="@mipmap/ic_launcher"
-    android:resizeMode="horizontal|vertical"
+    android:resizeMode="horizontal"
     android:targetCellWidth="4"
     android:targetCellHeight="1"
-    android:updatePeriodMillis="1800000"
+    android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

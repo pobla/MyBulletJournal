@@ -193,7 +193,7 @@
 
     <!-- Widget y añadir rápido -->
     <string name="widget_name">Hoy</string>
-    <string name="widget_description">Las tareas de hoy y un botón para añadir una sin abrir la app</string>
+    <string name="widget_description">Una barra para apuntar algo en hoy sin abrir la app</string>
     <string name="widget_add_task">+ Tarea</string>
     <string name="widget_empty">Nada para hoy todavía</string>
     <string name="quick_add_title">Añadir a hoy</string>

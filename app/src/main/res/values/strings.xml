@@ -186,7 +186,7 @@
 
     <!-- Widget and quick add -->
     <string name="widget_name">Today</string>
-    <string name="widget_description">Today\'s tasks and a button to add one without opening the app</string>
+    <string name="widget_description">A bar to jot something down for today without opening the app</string>
     <string name="widget_add_task">+ Task</string>
     <string name="widget_empty">Nothing for today yet</string>
     <string name="quick_add_title">Add to today</string>
