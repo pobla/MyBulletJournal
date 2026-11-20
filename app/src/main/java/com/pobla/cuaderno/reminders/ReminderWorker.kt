@@ -19,7 +19,9 @@ class ReminderWorker(
         val container = (applicationContext as CuadernoApp).container
         val repository = container.repository
 
-        if (container.settings.reminder(kind).enabled) {
+        val setting = container.settings.reminder(kind)
+        // Doble comprobación por si la programación se hizo antes de cambiar los días.
+        if (setting.enabled && LocalDate.now().dayOfWeek in setting.days) {
             when (kind) {
                 ReminderKind.HABITS -> {
                     val missing = repository.getMissingHabits(LocalDate.now())

@@ -35,6 +35,12 @@ class SettingsViewModel(
         scheduler.reschedule(kind)
     }
 
+    fun setReminderDays(kind: ReminderKind, days: Set<java.time.DayOfWeek>) {
+        if (days.isEmpty()) return
+        settings.setReminder(kind, settings.reminder(kind).copy(days = days))
+        scheduler.reschedule(kind)
+    }
+
     fun setReminderTime(kind: ReminderKind, hour: Int, minute: Int) {
         settings.setReminder(kind, settings.reminder(kind).copy(minutesOfDay = hour * 60 + minute))
         scheduler.reschedule(kind)

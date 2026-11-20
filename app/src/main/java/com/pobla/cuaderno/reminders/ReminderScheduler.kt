@@ -5,8 +5,10 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.pobla.cuaderno.data.ALL_DAYS
 import com.pobla.cuaderno.data.AppSettings
 import com.pobla.cuaderno.data.ReminderKind
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
@@ -41,7 +43,7 @@ class ReminderScheduler(
             workManager.cancelUniqueWork(workName(kind))
             return
         }
-        val delay = delayUntilNext(LocalDateTime.now(), setting.minutesOfDay)
+        val delay = delayUntilNext(LocalDateTime.now(), setting.minutesOfDay, setting.days)
         val request = OneTimeWorkRequestBuilder<ReminderWorker>()
             .setInitialDelay(delay.toMillis(), TimeUnit.MILLISECONDS)
             .setInputData(workDataOf(ReminderWorker.KEY_KIND to kind.name))
@@ -55,12 +57,25 @@ class ReminderScheduler(
 
         fun workName(kind: ReminderKind) = "recordatorio_${kind.name.lowercase()}"
 
-        /** Tiempo hasta la próxima vez que el reloj marque [minutesOfDay] (hoy o mañana). */
-        fun delayUntilNext(now: LocalDateTime, minutesOfDay: Int): Duration {
-            var target = now.toLocalDate().atStartOfDay().plusMinutes(minutesOfDay.toLong())
-            // Margen de un minuto para no disparar dos veces el mismo día al reprogramar.
-            if (!target.isAfter(now.plusMinutes(1))) target = target.plusDays(1)
-            return Duration.between(now, target)
+        /**
+         * Tiempo hasta la próxima vez que el reloj marque [minutesOfDay] en uno de los [days]
+         * (hoy si aún no ha pasado la hora, o el siguiente día permitido).
+         */
+        fun delayUntilNext(
+            now: LocalDateTime,
+            minutesOfDay: Int,
+            days: Set<DayOfWeek> = ALL_DAYS,
+        ): Duration {
+            val allowed = days.ifEmpty { ALL_DAYS }
+            val today = now.toLocalDate().atStartOfDay().plusMinutes(minutesOfDay.toLong())
+            for (offset in 0L..7L) {
+                val candidate = today.plusDays(offset)
+                // Margen de un minuto para no disparar dos veces el mismo día al reprogramar.
+                if (candidate.isAfter(now.plusMinutes(1)) && candidate.dayOfWeek in allowed) {
+                    return Duration.between(now, candidate)
+                }
+            }
+            return Duration.ofDays(1)
         }
     }
 }

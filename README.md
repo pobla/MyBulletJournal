@@ -35,7 +35,7 @@ Desde la versión #5, la app comprueba **una vez al día al abrirse** si hay un 
 - Toca el **texto** de una entrada para editarla, cambiar su tipo/estado o borrarla.
 - **Semana**: rejilla de hábitos (se puede marcar directamente) y resumen de cada día; toca un día para abrirlo.
 - **Pendientes**: días con apuntes sin pasar al cuaderno, del más antiguo al más reciente. ✓ los marca como pasados.
-- **Recordatorios** (Ajustes): uno para hábitos y otro para pasar al cuaderno, a la hora que elijas. Solo avisan si hace falta (te falta algún hábito / hay días pendientes). Tocar la notificación abre el día o la lista de pendientes.
+- **Recordatorios** (Ajustes): uno para hábitos y otro para pasar al cuaderno, a la hora y en los días de la semana que elijas (p. ej. L–V a las 9:00). Solo avisan si hace falta (te falta algún hábito / hay días pendientes). Tocar la notificación abre el día o la lista de pendientes.
 - **Ajustes**: añadir, renombrar, reordenar y quitar hábitos (se conserva el historial).
 - "Ya lo pasé" marca el día como pasado al cuaderno. Si después cambias algo, vuelve a pendiente y lo nuevo se resalta en naranja.
 

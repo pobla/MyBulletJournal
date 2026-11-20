@@ -11,12 +11,16 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -61,7 +65,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -76,6 +82,7 @@ import com.pobla.cuaderno.data.db.HabitEntity
 import com.pobla.cuaderno.reminders.Notifications
 import com.pobla.cuaderno.ui.components.SectionTitle
 import com.pobla.cuaderno.update.UpdateState
+import java.time.DayOfWeek
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
@@ -116,6 +123,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsVie
             if (enabled) ensureNotificationPermission()
         },
         onReminderTimeChange = viewModel::setReminderTime,
+        onReminderDaysChange = viewModel::setReminderDays,
         onTestReminder = { kind ->
             if (Notifications.canNotify(context)) Notifications.showTest(context, kind) else ensureNotificationPermission()
         },
@@ -152,6 +160,7 @@ fun SettingsScreen(
     notificationsAllowed: Boolean,
     onReminderEnabledChange: (ReminderKind, Boolean) -> Unit,
     onReminderTimeChange: (ReminderKind, Int, Int) -> Unit,
+    onReminderDaysChange: (ReminderKind, Set<DayOfWeek>) -> Unit,
     onTestReminder: (ReminderKind) -> Unit,
     onOpenNotificationSettings: () -> Unit,
     dynamicColor: Boolean,
@@ -274,6 +283,7 @@ fun SettingsScreen(
                         setting = setting,
                         onEnabledChange = { onReminderEnabledChange(kind, it) },
                         onPickTime = { pickingTime = kind },
+                        onDaysChange = { onReminderDaysChange(kind, it) },
                         onTest = { onTestReminder(kind) },
                     )
                 }
@@ -382,6 +392,7 @@ private fun ReminderCard(
     setting: ReminderSetting,
     onEnabledChange: (Boolean) -> Unit,
     onPickTime: () -> Unit,
+    onDaysChange: (Set<DayOfWeek>) -> Unit,
     onTest: () -> Unit,
 ) {
     val description = when (kind) {
@@ -402,15 +413,81 @@ private fun ReminderCard(
             Switch(checked = setting.enabled, onCheckedChange = onEnabledChange)
         }
         if (setting.enabled) {
+            DaySelector(
+                selected = setting.days,
+                onChange = onDaysChange,
+                modifier = Modifier.padding(top = 12.dp),
+            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 8.dp),
             ) {
                 FilledTonalButton(onClick = onPickTime) {
-                    Text("Cada día a las ${setting.label}")
+                    Text("A las ${setting.label}")
                 }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    setting.daysLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
                 TextButton(onClick = onTest) { Text("Probar") }
+            }
+        }
+    }
+}
+
+/** Siete botones redondos L M X J V S D; siempre queda al menos uno marcado. */
+@Composable
+private fun DaySelector(
+    selected: Set<DayOfWeek>,
+    onChange: (Set<DayOfWeek>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+    val haptics = LocalHapticFeedback.current
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        DayOfWeek.values().forEach { day ->
+            val isOn = day in selected
+            val container by animateColorAsState(
+                if (isOn) colors.primary else colors.surfaceContainerHighest,
+                animationSpec = motion.fastEffectsSpec(),
+                label = "dia",
+            )
+            val content by animateColorAsState(
+                if (isOn) colors.onPrimary else colors.onSurfaceVariant,
+                animationSpec = motion.fastEffectsSpec(),
+                label = "texto",
+            )
+            Surface(
+                onClick = {
+                    val next = if (isOn) selected - day else selected + day
+                    if (next.isNotEmpty()) {
+                        haptics.performHapticFeedback(
+                            if (isOn) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                        )
+                        onChange(next)
+                    } else {
+                        haptics.performHapticFeedback(HapticFeedbackType.Reject)
+                    }
+                },
+                shape = CircleShape,
+                color = container,
+                contentColor = content,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        "LMXJVSD"[day.value - 1].toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
     }
