@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cuaderno con tres líneas: • tarea, ○ evento, – nota -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#3E5A7A"
+        android:pathData="M36,30h36a4,4 0,0 1,4 4v40a4,4 0,0 1,-4 4h-36a4,4 0,0 1,-4 -4v-40a4,4 0,0 1,4 -4z" />
+    <path android:fillColor="#FBF8F1"
+        android:pathData="M40,34h30a2,2 0,0 1,2 2v36a2,2 0,0 1,-2 2h-30z" />
+    <path android:fillColor="#3E5A7A"
+        android:pathData="M47,44m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    <path android:fillColor="#3E5A7A"
+        android:pathData="M53,43h14v2h-14z" />
+    <path android:fillColor="#00000000" android:strokeColor="#B4502C" android:strokeWidth="1.6"
+        android:pathData="M47,54m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
+    <path android:fillColor="#3E5A7A"
+        android:pathData="M53,53h12v2h-12z" />
+    <path android:fillColor="#3E5A7A"
+        android:pathData="M44.5,63h5v2h-5z" />
+    <path android:fillColor="#3E5A7A"
+        android:pathData="M53,63h10v2h-10z" />
+</vector>
