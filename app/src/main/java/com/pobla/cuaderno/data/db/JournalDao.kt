@@ -40,9 +40,63 @@ interface JournalDao {
     @Delete
     suspend fun deleteEntry(entry: EntryEntity)
 
+    // Rangos (vista semanal)
+    @Query("SELECT * FROM days WHERE epochDay BETWEEN :from AND :to")
+    fun observeDaysInRange(from: Long, to: Long): Flow<List<DayEntity>>
+
+    @Query("SELECT * FROM entries WHERE epochDay BETWEEN :from AND :to ORDER BY epochDay, position, id")
+    fun observeEntriesInRange(from: Long, to: Long): Flow<List<EntryEntity>>
+
+    @Query("SELECT * FROM habit_checks WHERE epochDay BETWEEN :from AND :to")
+    fun observeHabitChecksInRange(from: Long, to: Long): Flow<List<HabitCheckEntity>>
+
+    // Pendientes de pasar al cuaderno
+    @Query(
+        """
+        SELECT * FROM (
+            SELECT d.epochDay AS epochDay,
+                   d.summary AS summary,
+                   d.lastTranscribedAt AS lastTranscribedAt,
+                   (SELECT COUNT(*) FROM entries e WHERE e.epochDay = d.epochDay) AS entryCount,
+                   (SELECT COUNT(*) FROM habit_checks h WHERE h.epochDay = d.epochDay AND h.done = 1) AS habitCount
+            FROM days d
+            WHERE d.transcribed = 0
+        )
+        WHERE entryCount > 0 OR habitCount > 0 OR TRIM(summary) != '' OR lastTranscribedAt IS NOT NULL
+        ORDER BY epochDay
+        """,
+    )
+    fun observePendingDays(): Flow<List<PendingDayRow>>
+
     // Hábitos
     @Query("SELECT * FROM habits WHERE archived = 0 ORDER BY position, id")
     fun observeActiveHabits(): Flow<List<HabitEntity>>
+
+    /** Activos + archivados que se marcaron ese día (para no perder el historial). */
+    @Query(
+        """
+        SELECT * FROM habits
+        WHERE archived = 0
+           OR id IN (SELECT habitId FROM habit_checks WHERE epochDay = :epochDay AND done = 1)
+        ORDER BY position, id
+        """,
+    )
+    fun observeHabitsForDay(epochDay: Long): Flow<List<HabitEntity>>
+
+    @Query("SELECT * FROM habits WHERE archived = 0 ORDER BY position, id")
+    suspend fun getActiveHabits(): List<HabitEntity>
+
+    @Query("SELECT * FROM habits WHERE id = :id")
+    suspend fun getHabit(id: Long): HabitEntity?
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM habits")
+    suspend fun nextHabitPosition(): Int
+
+    @Insert
+    suspend fun insertHabit(habit: HabitEntity): Long
+
+    @Update
+    suspend fun updateHabits(habits: List<HabitEntity>)
 
     @Query("SELECT * FROM habit_checks WHERE epochDay = :epochDay")
     fun observeHabitChecks(epochDay: Long): Flow<List<HabitCheckEntity>>

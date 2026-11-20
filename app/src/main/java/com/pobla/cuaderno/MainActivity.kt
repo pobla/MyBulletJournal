@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.pobla.cuaderno.ui.day.DayRoute
+import com.pobla.cuaderno.ui.AppRoot
 import com.pobla.cuaderno.ui.theme.CuadernoTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CuadernoTheme {
-                DayRoute()
+                AppRoot()
             }
         }
     }

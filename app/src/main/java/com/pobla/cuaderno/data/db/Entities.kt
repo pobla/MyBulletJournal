@@ -83,3 +83,12 @@ data class PhotoEntity(
     val fileName: String,
     val createdAt: Long,
 )
+
+/** Fila de la consulta de días pendientes (no es una tabla). */
+data class PendingDayRow(
+    val epochDay: Long,
+    val summary: String,
+    val lastTranscribedAt: Long?,
+    val entryCount: Int,
+    val habitCount: Int,
+)

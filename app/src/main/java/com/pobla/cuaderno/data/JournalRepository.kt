@@ -6,6 +6,7 @@ import com.pobla.cuaderno.data.db.DayEntity
 import com.pobla.cuaderno.data.db.EntryEntity
 import com.pobla.cuaderno.data.db.HabitCheckEntity
 import com.pobla.cuaderno.data.db.HabitEntity
+import com.pobla.cuaderno.data.db.PendingDayRow
 import com.pobla.cuaderno.model.EntryType
 import com.pobla.cuaderno.model.TaskStatus
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,14 @@ import java.time.LocalDate
 /** Todo lo que se guarda de un día, tal cual sale de la base de datos. */
 data class DayData(
     val day: DayEntity?,
+    val entries: List<EntryEntity>,
+    val habits: List<HabitEntity>,
+    val checks: List<HabitCheckEntity>,
+)
+
+/** Datos de un rango de días (vista semanal). */
+data class RangeData(
+    val days: List<DayEntity>,
     val entries: List<EntryEntity>,
     val habits: List<HabitEntity>,
     val checks: List<HabitCheckEntity>,
@@ -35,9 +44,49 @@ class JournalRepository(
         return combine(
             dao.observeDay(d),
             dao.observeEntries(d),
-            dao.observeActiveHabits(),
+            dao.observeHabitsForDay(d),
             dao.observeHabitChecks(d),
         ) { day, entries, habits, checks -> DayData(day, entries, habits, checks) }
+    }
+
+    fun observeRange(from: LocalDate, to: LocalDate): Flow<RangeData> {
+        val f = from.toEpochDay()
+        val t = to.toEpochDay()
+        return combine(
+            dao.observeDaysInRange(f, t),
+            dao.observeEntriesInRange(f, t),
+            dao.observeActiveHabits(),
+            dao.observeHabitChecksInRange(f, t),
+        ) { days, entries, habits, checks -> RangeData(days, entries, habits, checks) }
+    }
+
+    fun observePendingDays(): Flow<List<PendingDayRow>> = dao.observePendingDays()
+
+    fun observeActiveHabits(): Flow<List<HabitEntity>> = dao.observeActiveHabits()
+
+    // Gestión de hábitos (no afecta a "pasado al cuaderno")
+    suspend fun addHabit(name: String) = db.withTransaction {
+        dao.insertHabit(HabitEntity(name = name, position = dao.nextHabitPosition()))
+    }
+
+    suspend fun renameHabit(id: Long, name: String) = db.withTransaction {
+        val habit = dao.getHabit(id) ?: return@withTransaction
+        dao.updateHabits(listOf(habit.copy(name = name)))
+    }
+
+    /** Se archiva en lugar de borrar para conservar el historial de días pasados. */
+    suspend fun archiveHabit(id: Long) = db.withTransaction {
+        val habit = dao.getHabit(id) ?: return@withTransaction
+        dao.updateHabits(listOf(habit.copy(archived = true)))
+    }
+
+    suspend fun moveHabit(id: Long, offset: Int) = db.withTransaction {
+        val list = dao.getActiveHabits().toMutableList()
+        val from = list.indexOfFirst { it.id == id }
+        val to = from + offset
+        if (from < 0 || to !in list.indices) return@withTransaction
+        list.add(to, list.removeAt(from))
+        dao.updateHabits(list.mapIndexed { index, h -> h.copy(position = index) })
     }
 
     suspend fun addEntry(date: LocalDate, type: EntryType, text: String) = db.withTransaction {
