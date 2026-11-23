@@ -1,5 +1,6 @@
 package com.pobla.cuaderno.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -29,6 +30,8 @@ data class HabitEntity(
     val name: String,
     val position: Int,
     val archived: Boolean = false,
+    /** Para la sincronización con la nube (v2). */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 @Entity(
@@ -61,6 +64,8 @@ data class EntryEntity(
     val position: Int,
     val createdAt: Long,
     val updatedAt: Long,
+    /** Borrado "blando" para que el borrado también llegue a la nube (v2). */
+    @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
 )
 
 /** Foto adjunta a un día ([entryId] nulo) o a una entrada concreta. Se usará en la fase 3. */

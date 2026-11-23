@@ -81,18 +81,18 @@ class JournalRepository(
 
     // Gestión de hábitos (no afecta a "pasado al cuaderno")
     suspend fun addHabit(name: String) = db.withTransaction {
-        dao.insertHabit(HabitEntity(name = name, position = dao.nextHabitPosition()))
+        dao.insertHabit(HabitEntity(name = name, position = dao.nextHabitPosition(), updatedAt = now()))
     }
 
     suspend fun renameHabit(id: Long, name: String) = db.withTransaction {
         val habit = dao.getHabit(id) ?: return@withTransaction
-        dao.updateHabits(listOf(habit.copy(name = name)))
+        dao.updateHabits(listOf(habit.copy(name = name, updatedAt = now())))
     }
 
     /** Se archiva en lugar de borrar para conservar el historial de días pasados. */
     suspend fun archiveHabit(id: Long) = db.withTransaction {
         val habit = dao.getHabit(id) ?: return@withTransaction
-        dao.updateHabits(listOf(habit.copy(archived = true)))
+        dao.updateHabits(listOf(habit.copy(archived = true, updatedAt = now())))
     }
 
     suspend fun moveHabit(id: Long, offset: Int) = db.withTransaction {
@@ -101,7 +101,8 @@ class JournalRepository(
         val to = from + offset
         if (from < 0 || to !in list.indices) return@withTransaction
         list.add(to, list.removeAt(from))
-        dao.updateHabits(list.mapIndexed { index, h -> h.copy(position = index) })
+        val t = now()
+        dao.updateHabits(list.mapIndexed { index, h -> h.copy(position = index, updatedAt = t) })
     }
 
     suspend fun addEntry(date: LocalDate, type: EntryType, text: String) = db.withTransaction {
@@ -142,8 +143,10 @@ class JournalRepository(
 
     suspend fun deleteEntry(entryId: Long) = db.withTransaction {
         val entry = dao.getEntry(entryId) ?: return@withTransaction
-        dao.deleteEntry(entry)
-        markChanged(entry.epochDay, now())
+        val t = now()
+        // Borrado blando: desaparece de la app pero el borrado se sincroniza.
+        dao.updateEntry(entry.copy(deleted = true, updatedAt = t))
+        markChanged(entry.epochDay, t)
     }
 
     suspend fun toggleHabit(date: LocalDate, habitId: Long) = db.withTransaction {
@@ -169,9 +172,10 @@ class JournalRepository(
         val day = dao.getDay(d) ?: DayEntity(epochDay = d)
         dao.upsertDay(
             if (transcribed) {
-                day.copy(transcribed = true, lastTranscribedAt = now())
+                val t = now()
+                day.copy(transcribed = true, lastTranscribedAt = t, updatedAt = t)
             } else {
-                day.copy(transcribed = false)
+                day.copy(transcribed = false, updatedAt = now())
             },
         )
     }

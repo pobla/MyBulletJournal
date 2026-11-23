@@ -96,6 +96,13 @@ import com.pobla.cuaderno.ui.components.WhatsNewDialog
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import com.pobla.cuaderno.widget.TaskWidgetReceiver
+import com.pobla.cuaderno.CuadernoApp
+import com.pobla.cuaderno.cloud.SyncStatus
+import com.pobla.cuaderno.util.formatTimestamp
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.height
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
@@ -302,6 +309,9 @@ fun SettingsScreen(
                 }
             }
 
+            item(key = "cloud_title") { SectionTitle(stringResource(R.string.cloud_title)) }
+            item(key = "cloud") { CloudCard() }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 item(key = "look_title") { SectionTitle(stringResource(R.string.section_appearance)) }
                 item(key = "dynamic") {
@@ -404,6 +414,83 @@ fun SettingsScreen(
             },
             dismissButton = { TextButton(onClick = { archiving = null }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+/** Copia en la nube: entrar con Google, ver la última copia y copiar ahora. */
+@Composable
+private fun CloudCard() {
+    val context = LocalContext.current
+    val container = (context.applicationContext as CuadernoApp).container
+    val cloud = container.cloud
+    val user by cloud.user.collectAsStateWithLifecycle()
+    val status by cloud.status.collectAsStateWithLifecycle()
+    val lastSync by container.settings.lastSyncAt.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var signInError by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+
+    SettingsCard {
+        Text(
+            stringResource(R.string.cloud_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        val current = user
+        if (current == null) {
+            Button(
+                enabled = !busy,
+                onClick = {
+                    busy = true
+                    signInError = null
+                    scope.launch {
+                        try {
+                            cloud.signIn(context)
+                        } catch (_: GetCredentialCancellationException) {
+                            // El usuario cerró el selector: nada que hacer.
+                        } catch (e: Exception) {
+                            signInError = e.message ?: e.javaClass.simpleName
+                        } finally {
+                            busy = false
+                        }
+                    }
+                },
+            ) { Text(stringResource(R.string.cloud_sign_in)) }
+        } else {
+            Text(
+                stringResource(R.string.cloud_signed_in, current.email ?: current.uid),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                when {
+                    status == SyncStatus.Syncing -> stringResource(R.string.cloud_syncing)
+                    lastSync > 0 -> stringResource(R.string.cloud_last_sync, formatTimestamp(lastSync))
+                    else -> stringResource(R.string.cloud_never)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                FilledTonalButton(
+                    enabled = status != SyncStatus.Syncing,
+                    onClick = { scope.launch { cloud.pushChanges() } },
+                ) { Text(stringResource(R.string.cloud_sync_now)) }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { scope.launch { cloud.signOut(context) } }) {
+                    Text(stringResource(R.string.cloud_sign_out))
+                }
+            }
+        }
+        val error = signInError ?: (status as? SyncStatus.Error)?.message
+        if (error != null) {
+            Text(
+                stringResource(R.string.cloud_error, error),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
     }
 }
 

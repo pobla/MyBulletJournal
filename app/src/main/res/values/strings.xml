@@ -196,4 +196,16 @@
     <string name="widget_settings_action">Add widget</string>
     <string name="quick_widget_name">Add task</string>
     <string name="quick_widget_description">A 1×1 button to jot down a task without opening the app</string>
+
+    <!-- Cloud backup -->
+    <string name="cloud_title">Cloud backup</string>
+    <string name="cloud_desc">Copies your notebook to Firebase under your Google account so you can see it on the web. Only your account can read it. The app keeps working offline.</string>
+    <string name="cloud_sign_in">Sign in with Google</string>
+    <string name="cloud_signed_in">Signed in as %1$s</string>
+    <string name="cloud_last_sync">Last backup: %1$s</string>
+    <string name="cloud_never">Not backed up yet</string>
+    <string name="cloud_syncing">Backing up…</string>
+    <string name="cloud_sync_now">Back up now</string>
+    <string name="cloud_sign_out">Sign out</string>
+    <string name="cloud_error">Error: %1$s</string>
 </resources>

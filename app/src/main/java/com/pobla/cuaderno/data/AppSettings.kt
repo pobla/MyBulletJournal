@@ -87,6 +87,25 @@ class AppSettings(context: Context) {
         get() = prefs.getLong("last_seen_commit_time", 0L)
         set(value) = prefs.edit().putLong("last_seen_commit_time", value).apply()
 
+    // Copia en la nube
+    /** Marca de tiempo hasta la que ya se subió todo (-1 = nada todavía). */
+    var syncWatermark: Long
+        get() = prefs.getLong("sync_watermark", -1L)
+        set(value) = prefs.edit().putLong("sync_watermark", value).apply()
+
+    /** Cuenta con la que se hizo la última copia (si cambia, se vuelve a subir todo). */
+    var syncUid: String?
+        get() = prefs.getString("sync_uid", null)
+        set(value) = prefs.edit().putString("sync_uid", value).apply()
+
+    private val _lastSyncAt = MutableStateFlow(prefs.getLong("last_sync_at", 0L))
+    val lastSyncAt: StateFlow<Long> = _lastSyncAt.asStateFlow()
+
+    fun setLastSyncAt(value: Long) {
+        prefs.edit().putLong("last_sync_at", value).apply()
+        _lastSyncAt.value = value
+    }
+
     var lastUpdateCheck: Long
         get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, value).apply()

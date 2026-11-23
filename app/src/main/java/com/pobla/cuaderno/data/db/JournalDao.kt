@@ -14,7 +14,7 @@ const val PENDING_DAYS_QUERY = """
         SELECT d.epochDay AS epochDay,
                d.summary AS summary,
                d.lastTranscribedAt AS lastTranscribedAt,
-               (SELECT COUNT(*) FROM entries e WHERE e.epochDay = d.epochDay) AS entryCount,
+               (SELECT COUNT(*) FROM entries e WHERE e.epochDay = d.epochDay AND e.deleted = 0) AS entryCount,
                (SELECT COUNT(*) FROM habit_checks h WHERE h.epochDay = d.epochDay AND h.done = 1) AS habitCount
         FROM days d
         WHERE d.transcribed = 0
@@ -37,10 +37,10 @@ interface JournalDao {
     suspend fun upsertDay(day: DayEntity)
 
     // Entradas
-    @Query("SELECT * FROM entries WHERE epochDay = :epochDay ORDER BY position, id")
+    @Query("SELECT * FROM entries WHERE epochDay = :epochDay AND deleted = 0 ORDER BY position, id")
     fun observeEntries(epochDay: Long): Flow<List<EntryEntity>>
 
-    @Query("SELECT * FROM entries WHERE epochDay = :epochDay ORDER BY position, id")
+    @Query("SELECT * FROM entries WHERE epochDay = :epochDay AND deleted = 0 ORDER BY position, id")
     suspend fun getEntries(epochDay: Long): List<EntryEntity>
 
     /** Emite cada vez que cambia la tabla de entradas (para refrescar el widget). */
@@ -66,7 +66,7 @@ interface JournalDao {
     @Query("SELECT * FROM days WHERE epochDay BETWEEN :from AND :to")
     fun observeDaysInRange(from: Long, to: Long): Flow<List<DayEntity>>
 
-    @Query("SELECT * FROM entries WHERE epochDay BETWEEN :from AND :to ORDER BY epochDay, position, id")
+    @Query("SELECT * FROM entries WHERE epochDay BETWEEN :from AND :to AND deleted = 0 ORDER BY epochDay, position, id")
     fun observeEntriesInRange(from: Long, to: Long): Flow<List<EntryEntity>>
 
     @Query("SELECT * FROM habit_checks WHERE epochDay BETWEEN :from AND :to")
@@ -99,6 +99,28 @@ interface JournalDao {
 
     @Query("SELECT * FROM habits WHERE archived = 0 ORDER BY position, id")
     suspend fun getActiveHabits(): List<HabitEntity>
+
+    // Sincronización con la nube: lo cambiado desde la última copia
+    @Query("SELECT * FROM days WHERE updatedAt > :since")
+    suspend fun daysChangedSince(since: Long): List<DayEntity>
+
+    @Query("SELECT * FROM entries WHERE updatedAt > :since")
+    suspend fun entriesChangedSince(since: Long): List<EntryEntity>
+
+    @Query("SELECT * FROM habits WHERE updatedAt > :since")
+    suspend fun habitsChangedSince(since: Long): List<HabitEntity>
+
+    @Query("SELECT * FROM habit_checks WHERE updatedAt > :since")
+    suspend fun habitChecksChangedSince(since: Long): List<HabitCheckEntity>
+
+    /** Emite con cualquier cambio en cualquier tabla (para programar la copia). */
+    @Query(
+        """
+        SELECT (SELECT COUNT(*) FROM days) + (SELECT COUNT(*) FROM entries)
+             + (SELECT COUNT(*) FROM habits) + (SELECT COUNT(*) FROM habit_checks)
+        """,
+    )
+    fun observeAnyChange(): Flow<Int>
 
     @Query("SELECT * FROM habits WHERE id = :id")
     suspend fun getHabit(id: Long): HabitEntity?

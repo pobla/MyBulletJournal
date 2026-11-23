@@ -15,6 +15,7 @@ import com.pobla.cuaderno.widget.TaskWidget
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import com.pobla.cuaderno.cloud.CloudSync
 
 /** Contenedor de dependencias manual (sin Hilt, para mantenerlo sencillo). */
 class AppContainer(app: Application) {
@@ -27,6 +28,7 @@ class AppContainer(app: Application) {
     val settings = AppSettings(app)
     val updates = UpdateManager(app, settings, appScope)
     val reminders = ReminderScheduler(app, settings)
+    val cloud = CloudSync(app, database, settings)
 }
 
 class CuadernoApp : Application() {
@@ -38,6 +40,18 @@ class CuadernoApp : Application() {
         container = AppContainer(this)
         Notifications.createChannels(this)
         refreshWidgetOnChanges()
+        container.cloud.init()
+        syncOnChanges()
+    }
+
+    /** Cualquier cambio en los datos programa una copia en la nube (si hay sesión iniciada). */
+    @OptIn(FlowPreview::class)
+    private fun syncOnChanges() {
+        container.appScope.launch {
+            container.database.journalDao().observeAnyChange()
+                .debounce(3_000)
+                .collect { container.cloud.requestSync() }
+        }
     }
 
     /** Cada cambio en las entradas (desde la app o el propio widget) repinta el widget. */

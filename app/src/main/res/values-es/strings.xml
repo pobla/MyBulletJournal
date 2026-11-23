@@ -203,4 +203,16 @@
     <string name="widget_settings_action">Añadir widget</string>
     <string name="quick_widget_name">Añadir tarea</string>
     <string name="quick_widget_description">Un botón de 1×1 para apuntar una tarea sin abrir la app</string>
+
+    <!-- Copia en la nube -->
+    <string name="cloud_title">Copia en la nube</string>
+    <string name="cloud_desc">Copia tu cuaderno a Firebase, asociado a tu cuenta de Google, para verlo en la web. Solo tu cuenta puede leerlo. La app sigue funcionando sin conexión.</string>
+    <string name="cloud_sign_in">Entrar con Google</string>
+    <string name="cloud_signed_in">Conectado como %1$s</string>
+    <string name="cloud_last_sync">Última copia: %1$s</string>
+    <string name="cloud_never">Aún sin copia</string>
+    <string name="cloud_syncing">Copiando…</string>
+    <string name="cloud_sync_now">Copiar ahora</string>
+    <string name="cloud_sign_out">Cerrar sesión</string>
+    <string name="cloud_error">Error: %1$s</string>
 </resources>

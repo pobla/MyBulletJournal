@@ -74,6 +74,15 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.glance.appwidget)
+
+    // Copia en la nube: Firebase (Auth + Firestore) y login con Google (Credential Manager)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
+    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(platform(libs.androidx.compose.bom))
