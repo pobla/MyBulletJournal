@@ -45,6 +45,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Al volver a la app, baja lo que se haya cambiado en la web (y sube lo pendiente).
+        (application as CuadernoApp).container.cloud.requestSync()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)

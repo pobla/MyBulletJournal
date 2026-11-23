@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EntryEntity::class,
         PhotoEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +27,14 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE entries ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE habits ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** v2 → v3: entradas creadas en la web (id de Firestore). */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE entries ADD COLUMN remoteId TEXT")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_entries_remoteId` ON `entries` (`remoteId`)")
             }
         }
 
@@ -44,7 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
                         }
                     }
                 })
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
         }
     }

@@ -93,6 +93,11 @@ class AppSettings(context: Context) {
         get() = prefs.getLong("sync_watermark", -1L)
         set(value) = prefs.edit().putLong("sync_watermark", value).apply()
 
+    /** Mayor updatedAt ya bajado de la nube (-1 = nada todavía). */
+    var pullWatermark: Long
+        get() = prefs.getLong("pull_watermark", -1L)
+        set(value) = prefs.edit().putLong("pull_watermark", value).apply()
+
     /** Cuenta con la que se hizo la última copia (si cambia, se vuelve a subir todo). */
     var syncUid: String?
         get() = prefs.getString("sync_uid", null)

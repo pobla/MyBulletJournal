@@ -1,11 +1,12 @@
-// Cuaderno de bolsillo — web (solo lectura, por ahora).
-// Lee en tiempo real de Firestore: users/{uid}/days|entries|habits|habitChecks.
+// Cuaderno de bolsillo — web.
+// Lee y escribe en tiempo real en Firestore: users/{uid}/days|entries|habits|habitChecks.
+// La app del móvil baja estos cambios al abrirse (gana el cambio más reciente).
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut,
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, onSnapshot,
+  getFirestore, collection, doc, onSnapshot, setDoc, updateDoc,
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 // Configuración pública del proyecto (no es secreta: protegen las reglas de Firestore).
@@ -36,6 +37,9 @@ const T = {
     entries: (n) => `${n} ${n === 1 ? "entrada" : "entradas"}`, habitsN: (n) => `${n} ${n === 1 ? "hábito" : "hábitos"}`,
     more: (n) => `y ${n} más…`, lastSync: (s) => `Última copia: ${s}`, noSync: "Aún sin copia",
     notAllowed: "No se pudo entrar: ", prev: "Anterior", next: "Siguiente",
+    markDone: "Ya lo pasé", unmark: "Desmarcar", summaryPh: "Una frase para resumir el día",
+    types: { TASK: "Tarea", EVENT: "Evento", NOTE: "Nota" }, addPh: (t) => `${t}…  (o evento · - nota)`,
+    del: "Borrar", saveError: "No se pudo guardar: ",
   },
   en: {
     appName: "Pocket Notebook", loginHint: "Your notebook, backed up from your phone. Only your account can see it.",
@@ -48,6 +52,9 @@ const T = {
     entries: (n) => `${n} ${n === 1 ? "entry" : "entries"}`, habitsN: (n) => `${n} ${n === 1 ? "habit" : "habits"}`,
     more: (n) => `and ${n} more…`, lastSync: (s) => `Last backup: ${s}`, noSync: "Not backed up yet",
     notAllowed: "Couldn't sign in: ", prev: "Previous", next: "Next",
+    markDone: "Copied it", unmark: "Unmark", summaryPh: "One line to sum up the day",
+    types: { TASK: "Task", EVENT: "Event", NOTE: "Note" }, addPh: (t) => `${t}…  (o event · - note)`,
+    del: "Delete", saveError: "Couldn't save: ",
   },
 }[lang];
 document.documentElement.lang = lang;
@@ -83,7 +90,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 // ---------- Datos derivados ----------
 const entriesOf = (epoch) =>
   [...state.entries.values()].filter((e) => e.epochDay === epoch && !e.deleted)
-    .sort((a, b) => a.position - b.position || a.id - b.id);
+    .sort((a, b) => a.position - b.position || (a.createdAt || 0) - (b.createdAt || 0));
 const activeHabits = () => [...state.habits.values()].filter((h) => !h.archived).sort((a, b) => a.position - b.position);
 const doneHabitIds = (epoch) =>
   new Set([...state.checks.values()].filter((c) => c.epochDay === epoch && c.done).map((c) => c.habitId));
@@ -106,12 +113,17 @@ function pendingDays() {
 const finished = (e) => e.type === "TASK" && e.status !== "OPEN";
 
 // ---------- Vistas ----------
-function entryList(epoch, limit = Infinity) {
+function entryList(epoch, limit = Infinity, editable = false) {
   const list = entriesOf(epoch);
   if (!list.length) return `<p class="empty">${T.nothing}</p>`;
-  const items = list.slice(0, limit).map((e) =>
-    `<li class="entry ${finished(e) ? "finished" : ""}" ${isNew(epoch, e.updatedAt) ? 'style="background:var(--accent-soft);border-radius:10px;padding-inline:6px"' : ""}>
-       <span class="sym">${esc(e.symbol)}</span><span>${esc(e.text)}</span></li>`).join("");
+  const items = list.slice(0, limit).map((e) => {
+    const sym = editable && e.type === "TASK"
+      ? `<button class="sym btn-sym" data-cycle="${esc(e._doc)}">${esc(e.symbol)}</button>`
+      : `<span class="sym">${esc(e.symbol)}</span>`;
+    const del = editable ? `<button class="del" data-del="${esc(e._doc)}" aria-label="${T.del}" title="${T.del}">✕</button>` : "";
+    return `<li class="entry ${finished(e) ? "finished" : ""} ${isNew(epoch, e.updatedAt) ? "new" : ""}">
+       ${sym}<span class="text">${esc(e.text)}</span>${del}</li>`;
+  }).join("");
   const more = list.length > limit ? `<p class="empty">${T.more(list.length - limit)}</p>` : "";
   return `<ul class="entries">${items}</ul>${more}`;
 }
@@ -136,12 +148,14 @@ function renderDay() {
       ${isToday ? "" : `<button class="btn small" data-act="today">${T.today}</button>`}
       <button class="icon-btn" data-act="next" aria-label="${T.next}">›</button>
     </div>
-    ${status ? `<div class="status ${status}">${statusText}${d?.lastTranscribedAt && status === "done" ? ` · <span class="empty">${stamp(d.lastTranscribedAt)}</span>` : ""}</div>` : ""}
+    ${status ? `<div class="status ${status}"><span>${statusText}${d?.lastTranscribedAt && status === "done" ? ` · <span class="empty">${stamp(d.lastTranscribedAt)}</span>` : ""}</span>
+      <button class="btn small ${status === "done" ? "" : "primary"}" data-act="${status === "done" ? "unmark" : "markDone"}">${status === "done" ? T.unmark : T.markDone}</button></div>` : ""}
     <div class="section-title">${T.habits}</div>
-    <div class="chips">${habits.length ? habits.map((h) => `<span class="chip ${done.has(h.id) ? "on" : ""}">${done.has(h.id) ? "✓ " : ""}${esc(h.name)}</span>`).join("") : `<span class="empty">${T.noHabits}</span>`}</div>
-    ${d?.summary ? `<div class="section-title">${T.summary}</div><p class="summary">“${esc(d.summary)}”</p>` : ""}
+    <div class="chips">${habits.length ? habits.map((h) => `<button class="chip ${done.has(h.id) ? "on" : ""}" data-habit="${h.id}">${done.has(h.id) ? "✓ " : ""}${esc(h.name)}</button>`).join("") : `<span class="empty">${T.noHabits}</span>`}</div>
+    <div class="section-title">${T.summary}</div>
+    <textarea id="summary" class="summary-input" rows="2" placeholder="${T.summaryPh}">${esc(d?.summary || "")}</textarea>
     <div class="section-title">${T.log}</div>
-    ${entryList(e)}`;
+    ${entryList(e, Infinity, true)}`;
 }
 
 function renderWeek() {
@@ -190,11 +204,24 @@ function renderPending() {
   }).join("");
 }
 
+let lastRenderedKey = "";
 function render() {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === state.view));
   const view = $("#view");
+  // Si se está escribiendo la frase del día, no la pisamos al refrescar.
+  const active = document.activeElement;
+  const editingSummary = active && active.id === "summary" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
   view.innerHTML = { day: renderDay, week: renderWeek, pending: renderPending }[state.view]();
-  view.style.animation = "none"; void view.offsetWidth; view.style.animation = ""; // repetir la animación
+  if (editingSummary && $("#summary")) {
+    const ta = $("#summary"); ta.value = editingSummary.value; ta.focus(); ta.setSelectionRange(editingSummary.start, editingSummary.end);
+  }
+  // Animación solo al cambiar de vista o de día, no en cada actualización de datos.
+  const key = `${state.view}:${state.day}:${state.weekStart}`;
+  if (key !== lastRenderedKey) { view.style.animation = "none"; void view.offsetWidth; view.style.animation = ""; lastRenderedKey = key; }
+  const showBar = state.view === "day";
+  $("#add-bar").hidden = !showBar;
+  document.body.classList.toggle("with-bar", showBar);
+  updateAddBar();
   const n = pendingDays().length;
   const badge = $("#pending-badge");
   badge.hidden = n === 0; badge.textContent = n;
@@ -215,7 +242,43 @@ document.addEventListener("click", (ev) => {
   if (act === "prevWeek") state.weekStart -= 7;
   if (act === "nextWeek") state.weekStart += 7;
   if (act === "thisWeek") state.weekStart = startOfWeek(todayEpoch());
+  if (act === "markDone") return save(setTranscribed(state.day, true));
+  if (act === "unmark") return save(setTranscribed(state.day, false));
   render();
+});
+document.addEventListener("click", (ev) => {
+  const cycle = ev.target.closest("[data-cycle]")?.dataset.cycle;
+  if (cycle) return save(cycleTask(cycle));
+  const del = ev.target.closest("[data-del]")?.dataset.del;
+  if (del) return save(deleteEntry(del));
+  const habit = ev.target.closest("[data-habit]")?.dataset.habit;
+  if (habit) return save(toggleHabit(state.day, Number(habit)));
+});
+document.addEventListener("change", (ev) => {
+  if (ev.target.id === "summary") save(setSummary(state.day, ev.target.value));
+});
+
+// ---------- Barra de añadir (con los atajos de la app: "o " evento, "- " nota) ----------
+let addType = "TASK";
+const NEXT_TYPE = { TASK: "EVENT", EVENT: "NOTE", NOTE: "TASK" };
+const SHORTCUTS = [["o ", "EVENT"], ["O ", "EVENT"], ["○ ", "EVENT"], ["- ", "NOTE"], ["– ", "NOTE"], ["— ", "NOTE"], ["* ", "TASK"], ["• ", "TASK"]];
+function updateAddBar() {
+  $("#add-type").textContent = TYPE_SYMBOL[addType];
+  $("#add-text").placeholder = T.addPh(T.types[addType]);
+}
+$("#add-type").addEventListener("click", () => { addType = NEXT_TYPE[addType]; updateAddBar(); $("#add-text").focus(); });
+$("#add-text").addEventListener("input", (ev) => {
+  const v = ev.target.value;
+  const hit = SHORTCUTS.find(([p]) => v.startsWith(p));
+  if (hit) { addType = hit[1]; ev.target.value = v.slice(hit[0].length); updateAddBar(); }
+});
+$("#add-bar").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const input = $("#add-text");
+  const text = input.value.trim();
+  if (!text) return;
+  save(addEntry(state.day, addType, text));
+  input.value = ""; addType = "TASK"; updateAddBar(); input.focus();
 });
 document.addEventListener("keydown", (ev) => {
   if (state.view !== "day" || ev.target.closest("input, textarea")) return;
@@ -237,17 +300,74 @@ $("#signin").addEventListener("click", async () => {
 });
 $("#signout").addEventListener("click", () => signOut(auth));
 
+// ---------- Escrituras (la web escribe igual que la app: updatedAt y el día vuelve a pendiente) ----------
+const TYPE_SYMBOL = { TASK: "•", EVENT: "○", NOTE: "–" };
+const STATUS_SYMBOL = { OPEN: "•", DONE: "×", MIGRATED: ">" };
+const NEXT_STATUS = { OPEN: "DONE", DONE: "MIGRATED", MIGRATED: "OPEN" };
+const userPath = () => ["users", auth.currentUser.uid];
+const isoDate = (epoch) => toDate(epoch).toISOString().slice(0, 10);
+const now = () => Date.now();
+
+function save(promise) {
+  promise.catch((e) => alert(T.saveError + (e.code || e.message)));
+}
+function touchDay(epoch, extra = {}) {
+  // Cualquier cambio deja el día pendiente de pasar al cuaderno (como en la app).
+  return setDoc(doc(db, ...userPath(), "days", String(epoch)),
+    { epochDay: epoch, date: isoDate(epoch), transcribed: false, updatedAt: now(), ...extra }, { merge: true });
+}
+async function addEntry(epoch, type, text) {
+  const id = "w_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+  const position = Math.max(-1, ...entriesOf(epoch).map((e) => e.position ?? 0)) + 1;
+  const t = now();
+  await setDoc(doc(db, ...userPath(), "entries", id), {
+    epochDay: epoch, date: isoDate(epoch), type, status: "OPEN", symbol: TYPE_SYMBOL[type], text,
+    position, createdAt: t, updatedAt: t, deleted: false, origin: "web",
+  });
+  await touchDay(epoch);
+}
+async function cycleTask(docId) {
+  const e = state.entries.get(docId);
+  if (!e || e.type !== "TASK") return;
+  const status = NEXT_STATUS[e.status] || "OPEN";
+  await updateDoc(doc(db, ...userPath(), "entries", docId), { status, symbol: STATUS_SYMBOL[status], updatedAt: now() });
+  await touchDay(e.epochDay);
+}
+async function deleteEntry(docId) {
+  const e = state.entries.get(docId);
+  if (!e) return;
+  await updateDoc(doc(db, ...userPath(), "entries", docId), { deleted: true, updatedAt: now() });
+  await touchDay(e.epochDay);
+}
+async function toggleHabit(epoch, habitId) {
+  const done = doneHabitIds(epoch).has(habitId);
+  await setDoc(doc(db, ...userPath(), "habitChecks", `${epoch}_${habitId}`),
+    { epochDay: epoch, date: isoDate(epoch), habitId, done: !done, updatedAt: now() });
+  await touchDay(epoch);
+}
+async function setSummary(epoch, text) {
+  if ((state.days.get(epoch)?.summary || "") === text) return;
+  await touchDay(epoch, { summary: text, summaryUpdatedAt: now() });
+}
+function setTranscribed(epoch, value) {
+  const t = now();
+  const data = value
+    ? { epochDay: epoch, date: isoDate(epoch), transcribed: true, lastTranscribedAt: t, updatedAt: t }
+    : { epochDay: epoch, date: isoDate(epoch), transcribed: false, updatedAt: t };
+  return setDoc(doc(db, ...userPath(), "days", String(epoch)), data, { merge: true });
+}
+
 // ---------- Sesión y suscripciones en tiempo real ----------
 function listen(uid) {
   const base = ["users", uid];
   const sub = (name, map, key) => onSnapshot(collection(db, ...base, name), (snap) => {
     map.clear();
-    snap.forEach((d) => { const v = d.data(); map.set(key(v, d.id), v); });
+    snap.forEach((d) => { const v = { ...d.data(), _doc: d.id }; map.set(key(v, d.id), v); });
     render();
   });
   unsubscribers = [
     sub("days", state.days, (v) => v.epochDay),
-    sub("entries", state.entries, (v) => v.id),
+    sub("entries", state.entries, (_, id) => id),
     sub("habits", state.habits, (v) => v.id),
     sub("habitChecks", state.checks, (_, id) => id),
     onSnapshot(doc(db, ...base), (snap) => { state.lastSyncAt = snap.data()?.lastSyncAt || 0; render(); }),

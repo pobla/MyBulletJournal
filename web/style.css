@@ -138,6 +138,38 @@ body {
 .dot { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto; border: 1px solid var(--outline); }
 .dot.on { background: var(--primary); border-color: transparent; }
 
+/* Escritura desde la web */
+.chip { font: inherit; cursor: pointer; background: transparent; }
+.chip:hover { border-color: var(--primary); }
+.entry { border-radius: 10px; }
+.entry .sym.btn-sym { cursor: pointer; border: 0; background: transparent; font: inherit; font-weight: 700; color: inherit; padding: 0; }
+.entry .sym.btn-sym { color: var(--primary); }
+.entry.finished .sym.btn-sym { color: var(--muted); }
+.entry .text { flex: 1; }
+.entry .del { opacity: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 14px; }
+.entry:hover .del, .entry .del:focus { opacity: 1; }
+@media (hover: none) { .entry .del { opacity: .5; } }
+.entry.new { background: var(--accent-soft); padding-inline: 6px; }
+.status { justify-content: space-between; }
+textarea.summary-input {
+  width: 100%; font: inherit; font-style: italic; color: var(--ink); background: var(--surface);
+  border: 0; border-radius: 16px; padding: 12px 16px; resize: vertical; min-height: 48px;
+}
+textarea.summary-input:focus, .add-bar input:focus { outline: 2px solid var(--primary); }
+.add-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 3;
+  display: flex; gap: 8px; align-items: center; padding: 10px max(16px, calc((100vw - 760px) / 2 + 16px)) 16px;
+  background: var(--bg); border-top: 1px solid var(--outline);
+}
+.add-bar input {
+  flex: 1; font: inherit; color: var(--ink); background: var(--surface-high); border: 0;
+  border-radius: 999px; padding: 12px 18px; min-width: 0;
+}
+.add-bar .type { background: var(--primary-soft); font-weight: 700; }
+.add-bar .send { background: var(--primary); color: var(--on-primary); }
+body.with-bar .view { padding-bottom: 110px; }
+body.with-bar .footer { padding-bottom: 96px; }
+
 .footer { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 16px 24px; }
 
 .loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }

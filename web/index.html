@@ -31,6 +31,12 @@
       <button id="signout" class="btn text" data-i18n="signOut"></button>
     </header>
     <main id="view" class="view"></main>
+    <!-- Barra para añadir al día que se está viendo (fuera de la vista para no perder lo escrito al refrescar) -->
+    <form id="add-bar" class="add-bar" hidden autocomplete="off">
+      <button type="button" id="add-type" class="icon-btn type">•</button>
+      <input id="add-text" type="text" enterkeyhint="send">
+      <button type="submit" class="icon-btn send" aria-label="+">＋</button>
+    </form>
     <footer class="footer"><span id="who"></span> · <span id="last-sync"></span></footer>
   </div>
 

@@ -54,7 +54,10 @@ data class HabitCheckEntity(
     val updatedAt: Long,
 )
 
-@Entity(tableName = "entries", indices = [Index("epochDay")])
+@Entity(
+    tableName = "entries",
+    indices = [Index("epochDay"), Index(value = ["remoteId"], unique = true)],
+)
 data class EntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val epochDay: Long,
@@ -66,6 +69,8 @@ data class EntryEntity(
     val updatedAt: Long,
     /** Borrado "blando" para que el borrado también llegue a la nube (v2). */
     @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
+    /** Id del documento en Firestore si la entrada se creó fuera de la app (p. ej. en la web) (v3). */
+    val remoteId: String? = null,
 )
 
 /** Foto adjunta a un día ([entryId] nulo) o a una entrada concreta. Se usará en la fase 3. */

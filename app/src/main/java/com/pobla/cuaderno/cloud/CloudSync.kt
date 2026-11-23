@@ -40,6 +40,14 @@ import kotlinx.coroutines.withTimeout
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
+import androidx.room.withTransaction
+import com.google.firebase.firestore.DocumentSnapshot
+import com.pobla.cuaderno.data.db.DayEntity
+import com.pobla.cuaderno.data.db.EntryEntity
+import com.pobla.cuaderno.data.db.HabitCheckEntity
+import com.pobla.cuaderno.data.db.HabitEntity
+import com.pobla.cuaderno.model.EntryType
+import com.pobla.cuaderno.model.TaskStatus
 
 sealed interface SyncStatus {
     data object Idle : SyncStatus
@@ -48,9 +56,11 @@ sealed interface SyncStatus {
 }
 
 /**
- * Copia en la nube con Firebase. Room sigue siendo la fuente de verdad: aquí solo se SUBE
- * a Firestore lo que cambió desde la última copia, en `users/{uid}/…`. Las reglas de
- * Firestore hacen que solo esa cuenta pueda leer y escribir sus datos.
+ * Sincronización con Firebase en los dos sentidos, en `users/{uid}/…`:
+ * 1. BAJA lo cambiado en la nube (p. ej. desde la web) y lo aplica si es más reciente.
+ * 2. SUBE lo cambiado en el móvil desde la última copia.
+ * Gana el cambio más reciente (updatedAt). Room sigue siendo la fuente de verdad de la app y
+ * las reglas de Firestore hacen que solo esa cuenta pueda leer y escribir sus datos.
  */
 class CloudSync(
     private val context: Context,
@@ -140,14 +150,18 @@ class CloudSync(
         if (settings.syncUid != user.uid) {
             settings.syncUid = user.uid
             settings.syncWatermark = -1L
+            settings.pullWatermark = -1L
         }
         _status.value = SyncStatus.Syncing
         try {
+            val firestore = Firebase.firestore
+            val root = firestore.collection("users").document(user.uid)
+            // 1) Bajar primero lo cambiado fuera (la web); así el último cambio gana.
+            pull(root)
+
             val startedAt = System.currentTimeMillis()
             val since = settings.syncWatermark
             val dao = db.journalDao()
-            val firestore = Firebase.firestore
-            val root = firestore.collection("users").document(user.uid)
             val writes = mutableListOf<Pair<DocumentReference, Map<String, Any?>>>()
 
             dao.daysChangedSince(since).forEach { d ->
@@ -162,7 +176,7 @@ class CloudSync(
                 )
             }
             dao.entriesChangedSince(since).forEach { e ->
-                writes += root.collection("entries").document(e.id.toString()) to mapOf(
+                writes += root.collection("entries").document(e.remoteId ?: e.id.toString()) to mapOf(
                     "id" to e.id,
                     "epochDay" to e.epochDay,
                     "date" to LocalDate.ofEpochDay(e.epochDay).toString(),
@@ -218,6 +232,107 @@ class CloudSync(
             _status.value = SyncStatus.Error(e.message ?: e.javaClass.simpleName)
             return false
         }
+    }
+
+    /** Aplica en Room lo que cambió en Firestore desde la última bajada (si es más reciente). */
+    private suspend fun pull(root: DocumentReference) {
+        val since = settings.pullWatermark
+        var maxSeen = since
+        suspend fun fetch(name: String): List<DocumentSnapshot> = withTimeout(TIMEOUT_MS) {
+            root.collection(name).whereGreaterThan("updatedAt", since).get().await().documents
+        }
+        val habits = fetch("habits")
+        val days = fetch("days")
+        val entries = fetch("entries")
+        val checks = fetch("habitChecks")
+        val dao = db.journalDao()
+
+        db.withTransaction {
+            // Hábitos primero (las marcas dependen de ellos)
+            for (d in habits) {
+                val updatedAt = d.getLong("updatedAt") ?: continue
+                maxSeen = maxOf(maxSeen, updatedAt)
+                val id = d.getLong("id") ?: d.id.toLongOrNull() ?: continue
+                val local = dao.getHabit(id)
+                if (local != null && updatedAt <= local.updatedAt) continue
+                val name = d.getString("name") ?: local?.name ?: continue
+                dao.upsertHabit(
+                    HabitEntity(
+                        id = id,
+                        name = name,
+                        position = (d.getLong("position") ?: local?.position?.toLong() ?: 0L).toInt(),
+                        archived = d.getBoolean("archived") ?: false,
+                        updatedAt = updatedAt,
+                    ),
+                )
+            }
+            for (d in days) {
+                val updatedAt = d.getLong("updatedAt") ?: continue
+                maxSeen = maxOf(maxSeen, updatedAt)
+                val epochDay = d.getLong("epochDay") ?: d.id.toLongOrNull() ?: continue
+                val local = dao.getDay(epochDay)
+                if (local != null && updatedAt <= local.updatedAt) continue
+                dao.upsertDay(
+                    DayEntity(
+                        epochDay = epochDay,
+                        summary = d.getString("summary") ?: local?.summary.orEmpty(),
+                        summaryUpdatedAt = d.getLong("summaryUpdatedAt") ?: local?.summaryUpdatedAt ?: 0L,
+                        transcribed = d.getBoolean("transcribed") ?: false,
+                        lastTranscribedAt = d.getLong("lastTranscribedAt") ?: local?.lastTranscribedAt,
+                        updatedAt = updatedAt,
+                    ),
+                )
+            }
+            for (d in entries) {
+                val updatedAt = d.getLong("updatedAt") ?: continue
+                maxSeen = maxOf(maxSeen, updatedAt)
+                // Las de la app usan su id numérico como documento; las de la web, un id propio.
+                val numericId = d.id.toLongOrNull()
+                val local = dao.getEntryByRemoteId(d.id) ?: numericId?.let { dao.getEntry(it) }
+                if (local != null && updatedAt <= local.updatedAt) continue
+                val epochDay = d.getLong("epochDay") ?: continue
+                val type = d.getString("type")?.let { t -> EntryType.entries.firstOrNull { it.name == t } } ?: continue
+                val status = d.getString("status")?.let { s -> TaskStatus.entries.firstOrNull { it.name == s } }
+                    ?: TaskStatus.OPEN
+                val text = d.getString("text").orEmpty()
+                val deleted = d.getBoolean("deleted") ?: false
+                val position = d.getLong("position")?.toInt() ?: local?.position ?: dao.nextEntryPosition(epochDay)
+                if (local != null) {
+                    dao.updateEntry(
+                        local.copy(
+                            epochDay = epochDay, type = type, status = status, text = text,
+                            position = position, deleted = deleted, updatedAt = updatedAt,
+                        ),
+                    )
+                } else {
+                    dao.upsertEntry(
+                        EntryEntity(
+                            id = numericId ?: 0,
+                            epochDay = epochDay,
+                            type = type,
+                            status = status,
+                            text = text,
+                            position = position,
+                            createdAt = d.getLong("createdAt") ?: updatedAt,
+                            updatedAt = updatedAt,
+                            deleted = deleted,
+                            remoteId = if (numericId == null) d.id else null,
+                        ),
+                    )
+                }
+            }
+            for (d in checks) {
+                val updatedAt = d.getLong("updatedAt") ?: continue
+                maxSeen = maxOf(maxSeen, updatedAt)
+                val epochDay = d.getLong("epochDay") ?: continue
+                val habitId = d.getLong("habitId") ?: continue
+                if (dao.getHabit(habitId) == null) continue
+                val local = dao.getHabitCheck(epochDay, habitId)
+                if (local != null && updatedAt <= local.updatedAt) continue
+                dao.upsertHabitCheck(HabitCheckEntity(epochDay, habitId, d.getBoolean("done") ?: false, updatedAt))
+            }
+        }
+        settings.pullWatermark = maxSeen
     }
 
     companion object {

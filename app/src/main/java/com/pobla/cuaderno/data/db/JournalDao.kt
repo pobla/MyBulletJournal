@@ -47,6 +47,15 @@ interface JournalDao {
     @Query("SELECT COUNT(*) FROM entries")
     fun observeEntriesChanges(): Flow<Int>
 
+    @Query("SELECT * FROM entries WHERE remoteId = :remoteId")
+    suspend fun getEntryByRemoteId(remoteId: String): EntryEntity?
+
+    @Upsert
+    suspend fun upsertEntry(entry: EntryEntity): Long
+
+    @Upsert
+    suspend fun upsertHabit(habit: HabitEntity)
+
     @Query("SELECT * FROM entries WHERE id = :id")
     suspend fun getEntry(id: Long): EntryEntity?
 
