@@ -222,4 +222,17 @@
     <string name="migrate_to_tomorrow">Migrar a mañana</string>
     <string name="migrate_pick">Otro día…</string>
     <string name="migrated_to">→ %1$s</string>
+
+    <!-- Mes y registro futuro -->
+    <string name="tab_month">Mes</string>
+    <string name="month_mode">Mes</string>
+    <string name="future_mode">Futuro</string>
+    <string name="future_title">Registro futuro</string>
+    <string name="month_tasks">Tareas del mes</string>
+    <string name="month_calendar">Calendario</string>
+    <string name="month_empty">Nada todavía</string>
+    <string name="add_to_month">Añadir a %1$s</string>
+    <string name="move_to_month">Pasar a %1$s</string>
+    <string name="previous_month">Mes anterior</string>
+    <string name="next_month">Mes siguiente</string>
 </resources>

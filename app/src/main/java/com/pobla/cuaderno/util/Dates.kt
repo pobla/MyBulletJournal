@@ -31,6 +31,12 @@ fun formatTimestamp(epochMillis: Long): String =
 /** "Lunes 16 de noviembre" / "Monday, November 16" */
 fun LocalDate.weekdayDayMonth(): String = format(best("EEEEdMMMM")).capitalized()
 
+/** "Noviembre de 2026" / "November 2026" */
+fun java.time.YearMonth.monthYear(): String = atDay(1).format(best("MMMMyyyy")).capitalized()
+
+/** "Noviembre" / "November" */
+fun java.time.YearMonth.monthName(): String = atDay(1).format(best("MMMM")).capitalized()
+
 /** "24 nov" / "Nov 24" */
 fun LocalDate.shortDayMonth(): String = format(best("dMMM"))
 

@@ -48,6 +48,7 @@ import com.pobla.cuaderno.data.db.HabitCheckEntity
 import com.pobla.cuaderno.data.db.HabitEntity
 import com.pobla.cuaderno.model.EntryType
 import com.pobla.cuaderno.model.TaskStatus
+import com.pobla.cuaderno.data.db.MonthEntryEntity
 
 sealed interface SyncStatus {
     data object Idle : SyncStatus
@@ -191,6 +192,21 @@ class CloudSync(
                     "migratedTo" to e.migratedTo,
                 )
             }
+            dao.monthEntriesChangedSince(since).forEach { m ->
+                writes += root.collection("monthEntries").document(m.remoteId ?: m.id.toString()) to mapOf(
+                    "id" to m.id,
+                    "ym" to m.ym,
+                    "type" to m.type.name,
+                    "status" to m.status.name,
+                    "symbol" to symbolFor(m.type, m.status),
+                    "text" to m.text,
+                    "position" to m.position,
+                    "createdAt" to m.createdAt,
+                    "updatedAt" to m.updatedAt,
+                    "deleted" to m.deleted,
+                    "migratedTo" to m.migratedTo,
+                )
+            }
             dao.habitsChangedSince(since).forEach { h ->
                 writes += root.collection("habits").document(h.id.toString()) to mapOf(
                     "id" to h.id,
@@ -246,6 +262,7 @@ class CloudSync(
         val days = fetch("days")
         val entries = fetch("entries")
         val checks = fetch("habitChecks")
+        val monthEntries = fetch("monthEntries")
         val dao = db.journalDao()
 
         db.withTransaction {
@@ -333,6 +350,40 @@ class CloudSync(
                 val local = dao.getHabitCheck(epochDay, habitId)
                 if (local != null && updatedAt <= local.updatedAt) continue
                 dao.upsertHabitCheck(HabitCheckEntity(epochDay, habitId, d.getBoolean("done") ?: false, updatedAt))
+            }
+        }
+        db.withTransaction {
+            for (d in monthEntries) {
+                val updatedAt = d.getLong("updatedAt") ?: continue
+                maxSeen = maxOf(maxSeen, updatedAt)
+                val numericId = d.id.toLongOrNull()
+                val local = dao.getMonthEntryByRemoteId(d.id) ?: numericId?.let { dao.getMonthEntry(it) }
+                if (local != null && updatedAt <= local.updatedAt) continue
+                val ym = d.getLong("ym")?.toInt() ?: continue
+                val type = d.getString("type")?.let { t -> EntryType.entries.firstOrNull { it.name == t } } ?: continue
+                val status = d.getString("status")?.let { s -> TaskStatus.entries.firstOrNull { it.name == s } }
+                    ?: TaskStatus.OPEN
+                val position = d.getLong("position")?.toInt() ?: local?.position ?: dao.nextMonthPosition(ym)
+                val migratedTo = d.getLong("migratedTo")?.toInt()
+                if (local != null) {
+                    dao.updateMonthEntry(
+                        local.copy(
+                            ym = ym, type = type, status = status, text = d.getString("text").orEmpty(),
+                            position = position, deleted = d.getBoolean("deleted") ?: false,
+                            updatedAt = updatedAt, migratedTo = migratedTo,
+                        ),
+                    )
+                } else {
+                    dao.upsertMonthEntry(
+                        MonthEntryEntity(
+                            id = numericId ?: 0, ym = ym, type = type, status = status,
+                            text = d.getString("text").orEmpty(), position = position,
+                            createdAt = d.getLong("createdAt") ?: updatedAt, updatedAt = updatedAt,
+                            deleted = d.getBoolean("deleted") ?: false,
+                            remoteId = if (numericId == null) d.id else null, migratedTo = migratedTo,
+                        ),
+                    )
+                }
             }
         }
         settings.pullWatermark = maxSeen

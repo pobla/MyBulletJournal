@@ -14,8 +14,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         HabitCheckEntity::class,
         EntryEntity::class,
         PhotoEntity::class,
+        MonthEntryEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,6 +46,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v4 → v5: entradas por mes (tareas del mes y registro futuro). */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `month_entries` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `ym` INTEGER NOT NULL, " +
+                        "`type` TEXT NOT NULL, `status` TEXT NOT NULL, `text` TEXT NOT NULL, " +
+                        "`position` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                        "`deleted` INTEGER NOT NULL DEFAULT 0, `remoteId` TEXT, `migratedTo` INTEGER)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_month_entries_ym` ON `month_entries` (`ym`)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_month_entries_remoteId` ON `month_entries` (`remoteId`)",
+                )
+            }
+        }
+
         fun build(context: Context): AppDatabase {
             // Hábitos iniciales en el idioma del móvil al instalar.
             val defaultHabits = context.resources.getStringArray(com.pobla.cuaderno.R.array.default_habits)
@@ -59,7 +77,7 @@ abstract class AppDatabase : RoomDatabase() {
                         }
                     }
                 })
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
         }
     }

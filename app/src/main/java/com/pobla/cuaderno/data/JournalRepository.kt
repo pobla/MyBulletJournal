@@ -13,6 +13,8 @@ import com.pobla.cuaderno.model.TaskStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
+import com.pobla.cuaderno.data.db.MonthEntryEntity
+import java.time.YearMonth
 
 /** Todo lo que se guarda de un día, tal cual sale de la base de datos. */
 data class DayData(
@@ -233,8 +235,61 @@ class JournalRepository(
         }
     }
 
+    // ---- Entradas por mes (no afectan a "pasado al cuaderno") ----
+
+    fun observeMonthEntries(from: YearMonth, to: YearMonth): Flow<List<MonthEntryEntity>> =
+        dao.observeMonthEntries(from.toYm(), to.toYm())
+
+    suspend fun addMonthEntry(month: YearMonth, type: EntryType, text: String) = db.withTransaction {
+        val ym = month.toYm()
+        val t = now()
+        dao.insertMonthEntry(
+            MonthEntryEntity(ym = ym, type = type, text = text, position = dao.nextMonthPosition(ym), createdAt = t, updatedAt = t),
+        )
+    }
+
+    suspend fun cycleMonthEntry(id: Long) = db.withTransaction {
+        val e = dao.getMonthEntry(id) ?: return@withTransaction
+        if (e.type != EntryType.TASK) return@withTransaction
+        dao.updateMonthEntry(e.copy(status = e.status.next(), updatedAt = now()))
+    }
+
+    suspend fun updateMonthEntry(id: Long, type: EntryType, status: TaskStatus, text: String) = db.withTransaction {
+        val e = dao.getMonthEntry(id) ?: return@withTransaction
+        val newStatus = if (type == EntryType.TASK) status else TaskStatus.OPEN
+        dao.updateMonthEntry(e.copy(type = type, status = newStatus, text = text, updatedAt = now()))
+    }
+
+    suspend fun deleteMonthEntry(id: Long) = db.withTransaction {
+        val e = dao.getMonthEntry(id) ?: return@withTransaction
+        dao.updateMonthEntry(e.copy(deleted = true, updatedAt = now()))
+    }
+
+    /** Pasa una entrada a otro mes: queda como ">" con la marca y se copia abierta allí. */
+    suspend fun migrateMonthEntry(id: Long, to: YearMonth) = db.withTransaction {
+        val e = dao.getMonthEntry(id) ?: return@withTransaction
+        val ym = to.toYm()
+        if (e.migratedTo == ym) return@withTransaction
+        val t = now()
+        dao.updateMonthEntry(
+            e.copy(
+                status = if (e.type == EntryType.TASK) TaskStatus.MIGRATED else e.status,
+                migratedTo = ym,
+                updatedAt = t,
+            ),
+        )
+        dao.insertMonthEntry(
+            MonthEntryEntity(ym = ym, type = e.type, text = e.text, position = dao.nextMonthPosition(ym), createdAt = t, updatedAt = t),
+        )
+    }
+
     private suspend fun markChanged(epochDay: Long, t: Long) {
         val day = dao.getDay(epochDay) ?: DayEntity(epochDay = epochDay)
         dao.upsertDay(day.copy(transcribed = false, updatedAt = t))
     }
 }
+
+/** YearMonth ↔ entero aaaamm (como se guarda en la base de datos y en la nube). */
+fun YearMonth.toYm(): Int = year * 100 + monthValue
+
+fun ymToYearMonth(ym: Int): YearMonth = YearMonth.of(ym / 100, ym % 100)
