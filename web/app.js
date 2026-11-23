@@ -28,7 +28,9 @@ const lang = (navigator.language || "en").toLowerCase().startsWith("es") ? "es" 
 const T = {
   es: {
     appName: "Cuaderno de bolsillo", loginHint: "Tu cuaderno, copiado desde el móvil. Solo tu cuenta puede verlo.",
-    signIn: "Entrar con Google", signOut: "Salir", tabDay: "Día", tabWeek: "Semana", tabPending: "Pendientes",
+    signIn: "Entrar con Google", signOut: "Salir", tabDay: "Día", tabWeek: "Semana", tabMonth: "Mes", tabPending: "Pendientes",
+    monthMode: "Mes", futureMode: "Futuro", futureTitle: "Registro futuro", monthTasks: "Tareas del mes",
+    calendar: "Calendario", monthEmpty: "Nada todavía", toNextMonth: (m) => `Pasar a ${m.toLowerCase()}`,
     today: "Hoy", thisWeek: "Esta semana", week: "Semana", habits: "Hábitos", summary: "Frase del día", log: "Registro",
     days: "Días", nothing: "Nada apuntado", noHabits: "Sin hábitos",
     statusDone: "Pasado al cuaderno ✓", statusChanged: "Cambios sin pasar", statusPending: "Pendiente de pasar al cuaderno",
@@ -39,11 +41,13 @@ const T = {
     notAllowed: "No se pudo entrar: ", prev: "Anterior", next: "Siguiente",
     markDone: "Ya lo pasé", unmark: "Desmarcar", summaryPh: "Una frase para resumir el día",
     types: { TASK: "Tarea", EVENT: "Evento", NOTE: "Nota" }, addPh: (t) => `${t}…  (o evento · - nota)`,
-    del: "Borrar", saveError: "No se pudo guardar: ", prevMonth: "Mes anterior", nextMonth: "Mes siguiente",
+    toTomorrow: "→ Mañana", del: "Borrar", saveError: "No se pudo guardar: ", prevMonth: "Mes anterior", nextMonth: "Mes siguiente",
   },
   en: {
     appName: "Pocket Notebook", loginHint: "Your notebook, backed up from your phone. Only your account can see it.",
-    signIn: "Sign in with Google", signOut: "Sign out", tabDay: "Day", tabWeek: "Week", tabPending: "To copy",
+    signIn: "Sign in with Google", signOut: "Sign out", tabDay: "Day", tabWeek: "Week", tabMonth: "Month", tabPending: "To copy",
+    monthMode: "Month", futureMode: "Future log", futureTitle: "Future log", monthTasks: "This month",
+    calendar: "Calendar", monthEmpty: "Nothing yet", toNextMonth: (m) => `Move to ${m}`,
     today: "Today", thisWeek: "This week", week: "Week", habits: "Habits", summary: "Line of the day", log: "Log",
     days: "Days", nothing: "Nothing noted", noHabits: "No habits",
     statusDone: "Copied to the notebook ✓", statusChanged: "Changes not copied yet", statusPending: "Not copied to the notebook yet",
@@ -54,7 +58,7 @@ const T = {
     notAllowed: "Couldn't sign in: ", prev: "Previous", next: "Next",
     markDone: "Copied it", unmark: "Unmark", summaryPh: "One line to sum up the day",
     types: { TASK: "Task", EVENT: "Event", NOTE: "Note" }, addPh: (t) => `${t}…  (o event · - note)`,
-    del: "Delete", saveError: "Couldn't save: ", prevMonth: "Previous month", nextMonth: "Next month",
+    toTomorrow: "→ Tomorrow", del: "Delete", saveError: "Couldn't save: ", prevMonth: "Previous month", nextMonth: "Next month",
   },
 }[lang];
 document.documentElement.lang = lang;
@@ -80,7 +84,8 @@ const stamp = (ms) => new Intl.DateTimeFormat(lang, { day: "numeric", month: "sh
 // ---------- Estado ----------
 const state = {
   view: "day", day: todayEpoch(), weekStart: startOfWeek(todayEpoch()), cal: null, // cal = {y, m} del mini calendario
-  days: new Map(), entries: new Map(), habits: new Map(), checks: new Map(), lastSyncAt: 0,
+  days: new Map(), entries: new Map(), habits: new Map(), checks: new Map(), monthEntries: new Map(), lastSyncAt: 0,
+  month: null, monthMode: "month", // month = {y, m} de la vista Mes
 };
 let unsubscribers = [];
 
@@ -121,8 +126,13 @@ function entryList(epoch, limit = Infinity, editable = false) {
       ? `<button class="sym btn-sym" data-cycle="${esc(e._doc)}">${esc(e.symbol)}</button>`
       : `<span class="sym">${esc(e.symbol)}</span>`;
     const del = editable ? `<button class="del" data-del="${esc(e._doc)}" aria-label="${T.del}" title="${T.del}">✕</button>` : "";
+    // Migración: "→ 24 nov" si ya se copió; si no, botón para copiarla a mañana.
+    const migrated = e.type === "TASK" && e.status === "MIGRATED";
+    const mig = e.migratedTo != null
+      ? `<span class="mig">→ ${fmt(e.migratedTo, { day: "numeric", month: "short" })}</span>`
+      : migrated && editable ? `<button class="mig-btn" data-migrate="${esc(e._doc)}">${T.toTomorrow}</button>` : "";
     return `<li class="entry ${finished(e) ? "finished" : ""} ${isNew(epoch, e.updatedAt) ? "new" : ""}">
-       ${sym}<span class="text">${esc(e.text)}</span>${del}</li>`;
+       ${sym}<span class="text">${esc(e.text)}${mig ? " " + mig : ""}</span>${del}</li>`;
   }).join("");
   const more = list.length > limit ? `<p class="empty">${T.more(list.length - limit)}</p>` : "";
   return `<ul class="entries">${items}</ul>${more}`;
@@ -208,6 +218,76 @@ function renderPending() {
   }).join("") + "</div>";
 }
 
+// ---------- Mes y registro futuro ----------
+const ymOf = ({ y, m }) => y * 100 + (m + 1); // m es 0-11 en JS; ym = aaaamm
+const ymParts = (ym) => ({ y: Math.floor(ym / 100), m: (ym % 100) - 1 });
+const addMonths = ({ y, m }, n) => { const d = new Date(Date.UTC(y, m + n, 1)); return { y: d.getUTCFullYear(), m: d.getUTCMonth() }; };
+const monthLabel = (mo, withYear = true) => cap(new Intl.DateTimeFormat(lang, { month: "long", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC" })
+  .format(new Date(Date.UTC(mo.y, mo.m, 1))));
+const monthEntriesOf = (ym) => [...state.monthEntries.values()].filter((e) => e.ym === ym && !e.deleted)
+  .sort((a, b) => a.position - b.position || (a.createdAt || 0) - (b.createdAt || 0));
+
+function monthEntryList(ym) {
+  const list = monthEntriesOf(ym);
+  const items = list.map((e) => {
+    const sym = e.type === "TASK"
+      ? `<button class="sym btn-sym" data-mcycle="${esc(e._doc)}">${esc(e.symbol)}</button>` : `<span class="sym">${esc(e.symbol)}</span>`;
+    const mig = e.migratedTo != null
+      ? `<span class="mig">→ ${monthLabel(ymParts(e.migratedTo), false)}</span>`
+      : `<button class="mig-btn hover-only" data-mnext="${esc(e._doc)}">${T.toNextMonth(monthLabel(addMonths(ymParts(ym), 1), false))}</button>`;
+    return `<li class="entry ${finished(e) ? "finished" : ""}">${sym}<span class="text">${esc(e.text)} ${mig}</span>
+      <button class="del" data-mdel="${esc(e._doc)}" aria-label="${T.del}" title="${T.del}">✕</button></li>`;
+  }).join("");
+  return `${list.length ? `<ul class="entries">${items}</ul>` : `<p class="empty">${T.monthEmpty}</p>`}
+    <form class="mini-add" data-madd="${ym}" autocomplete="off">
+      <input id="madd-${ym}" type="text" placeholder="${T.addPh(T.types.TASK)}" enterkeyhint="send">
+      <button class="icon-btn send" type="submit" style="width:36px;height:36px;background:var(--primary);color:var(--on-primary)">＋</button>
+    </form>`;
+}
+
+function renderMonth() {
+  const mo = state.month || monthOf(todayEpoch());
+  const isMonth = state.monthMode === "month";
+  const seg = `<div class="seg"><button class="${isMonth ? "on" : ""}" data-act="modeMonth">${T.monthMode}</button>
+    <button class="${isMonth ? "" : "on"}" data-act="modeFuture">${T.futureMode}</button></div>`;
+  if (!isMonth) {
+    const start = addMonths(monthOf(todayEpoch()), 1);
+    const cards = [...Array(6).keys()].map((i) => {
+      const m = addMonths(start, i);
+      return `<div class="card"><div class="section-title" style="margin-top:0">${monthLabel(m)}</div>${monthEntryList(ymOf(m))}</div>`;
+    }).join("");
+    return `${seg}<h2>${T.futureTitle}</h2><div class="future-grid">${cards}</div>`;
+  }
+  const first = Math.floor(Date.UTC(mo.y, mo.m, 1) / DAY_MS);
+  const n = new Date(Date.UTC(mo.y, mo.m + 1, 0)).getUTCDate();
+  const today = todayEpoch();
+  const isCurrent = ymOf(mo) === ymOf(monthOf(today));
+  const lines = [...Array(n).keys()].map((i) => {
+    const e = first + i;
+    const dow = (toDate(e).getUTCDay() + 6) % 7;
+    const list = entriesOf(e);
+    const events = list.filter((x) => x.type === "EVENT").map((x) => `○ ${esc(x.text)}`).join(" · ");
+    const open = list.filter((x) => x.type === "TASK" && x.status === "OPEN").length;
+    const d = state.days.get(e);
+    const st = dayStatus(e);
+    return `<button class="cal-line ${e === today ? "today" : ""}" data-open="${e}">
+      <span class="num">${i + 1}<small class="${dow >= 5 ? "we" : ""}">${weekLetter(e)}</small></span>
+      <span>${events ? `<div class="ev">${events}</div>` : ""}${d?.summary ? `<div class="sm">“${esc(d.summary)}”</div>` : ""}${open ? `<div class="sm" style="font-style:normal">• ${open}</div>` : ""}</span>
+      <span class="dot-s ${st === "pending" ? "pending" : st === "changed" ? "changed" : ""}"></span></button>`;
+  }).join("");
+  return `${seg}
+    <div class="nav">
+      <button class="icon-btn" data-act="monthPrev" aria-label="${T.prevMonth}">‹</button>
+      <div class="title"><h2>${monthLabel(mo)}</h2></div>
+      ${isCurrent ? "" : `<button class="btn small" data-act="monthToday">${T.today}</button>`}
+      <button class="icon-btn" data-act="monthNext" aria-label="${T.nextMonth}">›</button>
+    </div>
+    <div class="month-layout">
+      <section class="month-tasks"><div class="section-title">${T.monthTasks}</div><div class="card">${monthEntryList(ymOf(mo))}</div></section>
+      <section><div class="section-title">${T.calendar}</div><div class="cal-list">${lines}</div></section>
+    </div>`;
+}
+
 // ---------- Barra lateral (escritorio): calendario del mes y pendientes ----------
 const desktopQuery = matchMedia("(min-width: 1000px)");
 function monthOf(epoch) { const d = toDate(epoch); return { y: d.getUTCFullYear(), m: d.getUTCMonth() }; }
@@ -252,21 +332,24 @@ function render() {
   const view = $("#view");
   // Si se está escribiendo la frase del día, no la pisamos al refrescar.
   const active = document.activeElement;
-  const editingSummary = active && active.id === "summary" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
+  const editingSummary = active && active.id && view.contains(active) && /^(INPUT|TEXTAREA)$/.test(active.tagName)
+    ? { id: active.id, value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
   const bar = $("#add-bar");
   const typing = document.activeElement === $("#add-text");
   $("#app").appendChild(bar); // sacarla antes de reescribir la vista (conserva lo escrito)
-  view.innerHTML = { day: renderDay, week: renderWeek, pending: renderPending }[state.view]();
+  view.innerHTML = { day: renderDay, week: renderWeek, month: renderMonth, pending: renderPending }[state.view]();
   $("#sidebar").innerHTML = renderSidebar();
   const slot = $("#add-slot");
   const inline = desktopQuery.matches && slot;
   if (inline) slot.appendChild(bar);
   if (typing) $("#add-text").focus();
-  if (editingSummary && $("#summary")) {
-    const ta = $("#summary"); ta.value = editingSummary.value; ta.focus(); ta.setSelectionRange(editingSummary.start, editingSummary.end);
+  if (editingSummary && document.getElementById(editingSummary.id)) {
+    const el = document.getElementById(editingSummary.id);
+    el.value = editingSummary.value; el.focus();
+    try { el.setSelectionRange(editingSummary.start, editingSummary.end); } catch (_) {}
   }
   // Animación solo al cambiar de vista o de día, no en cada actualización de datos.
-  const key = `${state.view}:${state.day}:${state.weekStart}`;
+  const key = `${state.view}:${state.day}:${state.weekStart}:${JSON.stringify(state.month)}:${state.monthMode}`;
   if (key !== lastRenderedKey) { view.style.animation = "none"; void view.offsetWidth; view.style.animation = ""; lastRenderedKey = key; }
   const showBar = state.view === "day";
   bar.hidden = !showBar;
@@ -290,6 +373,11 @@ document.addEventListener("click", (ev) => {
   if (act === "next") state.day += 1;
   if (act === "today") state.day = todayEpoch();
   if (["prev", "next", "today"].includes(act)) state.cal = monthOf(state.day);
+  if (act === "modeMonth") state.monthMode = "month";
+  if (act === "modeFuture") state.monthMode = "future";
+  if (act === "monthPrev") state.month = addMonths(state.month || monthOf(todayEpoch()), -1);
+  if (act === "monthNext") state.month = addMonths(state.month || monthOf(todayEpoch()), 1);
+  if (act === "monthToday") state.month = monthOf(todayEpoch());
   if (act === "calPrev" || act === "calNext") {
     const { y, m } = state.cal || monthOf(state.day);
     const d = new Date(Date.UTC(y, m + (act === "calNext" ? 1 : -1), 1));
@@ -305,10 +393,33 @@ document.addEventListener("click", (ev) => {
 document.addEventListener("click", (ev) => {
   const cycle = ev.target.closest("[data-cycle]")?.dataset.cycle;
   if (cycle) return save(cycleTask(cycle));
+  const mcycle = ev.target.closest("[data-mcycle]")?.dataset.mcycle;
+  if (mcycle) return save(cycleMonthEntry(mcycle));
+  const mdel = ev.target.closest("[data-mdel]")?.dataset.mdel;
+  if (mdel) return save(deleteMonthEntry(mdel));
+  const mnext = ev.target.closest("[data-mnext]")?.dataset.mnext;
+  if (mnext) return save(moveMonthEntryNext(mnext));
+  const mig = ev.target.closest("[data-migrate]")?.dataset.migrate;
+  if (mig) return save(migrateTask(mig, state.day + 1));
   const del = ev.target.closest("[data-del]")?.dataset.del;
   if (del) return save(deleteEntry(del));
   const habit = ev.target.closest("[data-habit]")?.dataset.habit;
   if (habit) return save(toggleHabit(state.day, Number(habit)));
+});
+document.addEventListener("submit", (ev) => {
+  const form = ev.target.closest("[data-madd]");
+  if (!form) return;
+  ev.preventDefault();
+  const input = form.querySelector("input");
+  let text = input.value.trim();
+  if (!text) return;
+  // Mismos atajos que en el día: "o " evento, "- " nota
+  let type = "TASK";
+  const hit = SHORTCUTS.find(([p]) => text.startsWith(p));
+  if (hit) { type = hit[1]; text = text.slice(hit[0].length).trim(); }
+  if (!text) return;
+  input.value = ""; // vaciar antes de guardar: el refresco de datos puede llegar enseguida
+  save(addMonthEntry(Number(form.dataset.madd), type, text));
 });
 document.addEventListener("change", (ev) => {
   if (ev.target.id === "summary") save(setSummary(state.day, ev.target.value));
@@ -390,6 +501,41 @@ async function cycleTask(docId) {
   await updateDoc(doc(db, ...userPath(), "entries", docId), { status, symbol: STATUS_SYMBOL[status], updatedAt: now() });
   await touchDay(e.epochDay);
 }
+async function migrateTask(docId, toEpoch) {
+  const e = state.entries.get(docId);
+  if (!e || e.type !== "TASK" || e.migratedTo === toEpoch) return;
+  const t = now();
+  await updateDoc(doc(db, ...userPath(), "entries", docId),
+    { status: "MIGRATED", symbol: STATUS_SYMBOL.MIGRATED, migratedTo: toEpoch, updatedAt: t });
+  await addEntry(toEpoch, "TASK", e.text);
+  await touchDay(e.epochDay);
+}
+async function addMonthEntry(ym, type, text) {
+  const id = "w_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+  const position = Math.max(-1, ...monthEntriesOf(ym).map((e) => e.position ?? 0)) + 1;
+  const t = now();
+  await setDoc(doc(db, ...userPath(), "monthEntries", id), {
+    ym, type, status: "OPEN", symbol: TYPE_SYMBOL[type], text, position, createdAt: t, updatedAt: t, deleted: false, origin: "web",
+  });
+}
+async function cycleMonthEntry(docId) {
+  const e = state.monthEntries.get(docId);
+  if (!e || e.type !== "TASK") return;
+  const status = NEXT_STATUS[e.status] || "OPEN";
+  await updateDoc(doc(db, ...userPath(), "monthEntries", docId), { status, symbol: STATUS_SYMBOL[status], updatedAt: now() });
+}
+async function deleteMonthEntry(docId) {
+  await updateDoc(doc(db, ...userPath(), "monthEntries", docId), { deleted: true, updatedAt: now() });
+}
+async function moveMonthEntryNext(docId) {
+  const e = state.monthEntries.get(docId);
+  if (!e) return;
+  const to = ymOf(addMonths(ymParts(e.ym), 1));
+  const data = { migratedTo: to, updatedAt: now() };
+  if (e.type === "TASK") Object.assign(data, { status: "MIGRATED", symbol: STATUS_SYMBOL.MIGRATED });
+  await updateDoc(doc(db, ...userPath(), "monthEntries", docId), data);
+  await addMonthEntry(to, e.type, e.text);
+}
 async function deleteEntry(docId) {
   const e = state.entries.get(docId);
   if (!e) return;
@@ -427,6 +573,7 @@ function listen(uid) {
     sub("entries", state.entries, (_, id) => id),
     sub("habits", state.habits, (v) => v.id),
     sub("habitChecks", state.checks, (_, id) => id),
+    sub("monthEntries", state.monthEntries, (_, id) => id),
     onSnapshot(doc(db, ...base), (snap) => { state.lastSyncAt = snap.data()?.lastSyncAt || 0; render(); }),
   ];
 }

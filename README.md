@@ -47,6 +47,8 @@ Por eso conviene escribir los commits pensando en que son las notas de versión.
 - **Semana**: rejilla de hábitos (se puede marcar directamente) y resumen de cada día; toca un día para abrirlo.
 - **Pendientes**: días con apuntes sin pasar al cuaderno, del más antiguo al más reciente. ✓ los marca como pasados.
 - **Recordatorios** (Ajustes): uno para hábitos y otro para pasar al cuaderno, a la hora y en los días de la semana que elijas (p. ej. L–V a las 9:00). Solo avisan si hace falta (te falta algún hábito / hay días pendientes). Tocar la notificación abre el día o la lista de pendientes.
+- **Mes y registro futuro**: tareas del mes y calendario del mes (eventos, frase y pendientes por día); registro futuro con los próximos 6 meses. Todo se puede pasar al mes siguiente. En la app (pestaña Mes) y en la web.
+- **Migrar tareas**: al ciclar una tarea a > se puede copiar a mañana u otro día; la original queda con → fecha.
 - **Widgets**: "Hoy" (barra de una fila, 4×1 por defecto, con el mismo aspecto que la hoja rápida) y "Añadir tarea" (círculo + de 1×1). Abren una hoja con el teclado para apuntar sin abrir la app. Añádelo desde *Ajustes → Widget* o manteniendo pulsada la pantalla de inicio → Widgets.
 - **Importar texto**: comparte texto desde cualquier app (p. ej. una respuesta de Claude) a *Cuaderno de bolsillo*, o usa *⋮ → Importar texto* en la vista del día. Reconoce • ○ – × >, casillas y listas numeradas; líneas como "Mañana", "Lunes" o "23/11" cambian el día. "× Creatina" marca el hábito. Vista previa para desmarcar o cambiar tipos antes de guardar. El botón "Copiar instrucciones y abrir Claude" le pasa a Claude el formato.
 - **Ajustes**: añadir, renombrar, reordenar y quitar hábitos (se conserva el historial).

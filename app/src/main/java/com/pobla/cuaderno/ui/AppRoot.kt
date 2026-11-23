@@ -69,10 +69,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.unit.dp
 import com.pobla.cuaderno.update.ReleaseNote
 import android.content.Context
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.vectorResource
+import com.pobla.cuaderno.ui.month.MonthRoute
 
-private enum class Tab(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
+private enum class Tab(val route: String, @StringRes val labelRes: Int, val icon: ImageVector?, @DrawableRes val iconRes: Int = 0) {
     DAY("day", R.string.tab_day, Icons.Filled.Create),
     WEEK("week", R.string.tab_week, Icons.Filled.DateRange),
+    MONTH("month", R.string.tab_month, null, R.drawable.ic_tab_month),
     PENDING("pending", R.string.tab_pending, Icons.AutoMirrored.Filled.List),
     SETTINGS("settings", R.string.tab_settings, Icons.Filled.Settings),
 }
@@ -153,13 +157,14 @@ fun AppRoot(
                             selected = currentRoute == tab.route,
                             onClick = { navController.navigateToTab(tab.route) },
                             icon = {
+                                val icon = tab.icon ?: ImageVector.vectorResource(tab.iconRes)
                                 val count = pending.days.size
                                 if (tab == Tab.PENDING && count > 0) {
                                     BadgedBox(badge = { Badge { Text("$count") } }) {
-                                        Icon(tab.icon, contentDescription = null)
+                                        Icon(icon, contentDescription = null)
                                     }
                                 } else {
-                                    Icon(tab.icon, contentDescription = null)
+                                    Icon(icon, contentDescription = null)
                                 }
                             },
                             label = { Text(stringResource(tab.labelRes)) },
@@ -182,6 +187,7 @@ fun AppRoot(
         ) {
             composable(Tab.DAY.route) { DayRoute(dayViewModel, onImport = { importText = "" }) }
             composable(Tab.WEEK.route) { WeekRoute(onOpenDay = openDay) }
+            composable(Tab.MONTH.route) { MonthRoute(onOpenDay = openDay) }
             composable(Tab.PENDING.route) { PendingRoute(pendingViewModel, onOpenDay = openDay) }
             composable(Tab.SETTINGS.route) { SettingsRoute() }
         }

@@ -108,6 +108,19 @@ import com.pobla.cuaderno.R
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import com.pobla.cuaderno.util.shortDayMonth
 
 @Composable
 fun DayRoute(
@@ -124,6 +137,7 @@ fun DayRoute(
         onSummaryChange = viewModel::onSummaryChange,
         onAddEntry = viewModel::addEntry,
         onCycleTask = viewModel::cycleTask,
+        onMigrate = viewModel::migrateTask,
         onUpdateEntry = viewModel::updateEntry,
         onDeleteEntry = viewModel::deleteEntry,
         onSetTranscribed = viewModel::setTranscribed,
@@ -145,8 +159,31 @@ fun DayScreen(
     onDeleteEntry: (Long) -> Unit,
     onSetTranscribed: (Boolean) -> Unit,
     onImport: () -> Unit = {},
+    onMigrate: (Long, LocalDate) -> Unit = { _, _ -> },
 ) {
     var editing by remember { mutableStateOf<EntryUi?>(null) }
+    var pickingMigration by remember { mutableStateOf<EntryUi?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val migratedMessage = stringResource(R.string.migrated_snackbar)
+    val copyTomorrowLabel = stringResource(R.string.migrate_copy_tomorrow)
+    // Al ciclar una tarea a ">" ofrecemos copiarla a mañana (migración de bullet journal).
+    val cycle: (EntryUi) -> Unit = { entry ->
+        onCycleTask(entry.id)
+        if (entry.type == EntryType.TASK && entry.status == TaskStatus.DONE && entry.migratedTo == null) {
+            val tomorrow = state.date.plusDays(1)
+            scope.launch {
+                snackbar.currentSnackbarData?.dismiss()
+                val result = snackbar.showSnackbar(
+                    message = migratedMessage,
+                    actionLabel = copyTomorrowLabel,
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Long,
+                )
+                if (result == SnackbarResult.ActionPerformed) onMigrate(entry.id, tomorrow)
+            }
+        }
+    }
     var menuOpen by remember { mutableStateOf(false) }
     val motion = MaterialTheme.motionScheme
 
@@ -218,6 +255,7 @@ fun DayScreen(
             )
         },
         bottomBar = { EntryInputBar(onAdd = onAddEntry) },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         // Contenido del día: se desliza a izquierda/derecha al cambiar de fecha.
         AnimatedContent(
@@ -241,7 +279,7 @@ fun DayScreen(
                 padding = padding,
                 onToggleHabit = onToggleHabit,
                 onSummaryChange = onSummaryChange,
-                onCycleTask = onCycleTask,
+                onCycle = cycle,
                 onEdit = { editing = it },
                 onSetTranscribed = onSetTranscribed,
             )
@@ -260,7 +298,35 @@ fun DayScreen(
                 onDeleteEntry(entry.id)
                 editing = null
             },
+            onMigrateTomorrow = {
+                onMigrate(entry.id, state.date.plusDays(1))
+                editing = null
+            },
+            onMigratePick = {
+                pickingMigration = entry
+                editing = null
+            },
         )
+    }
+
+    pickingMigration?.let { entry ->
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = state.date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { pickingMigration = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { millis ->
+                        onMigrate(entry.id, Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
+                    }
+                    pickingMigration = null
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pickingMigration = null }) { Text(stringResource(R.string.cancel)) }
+            },
+        ) { DatePicker(state = pickerState) }
     }
 }
 
@@ -297,7 +363,7 @@ private fun DayContent(
     padding: PaddingValues,
     onToggleHabit: (Long) -> Unit,
     onSummaryChange: (String) -> Unit,
-    onCycleTask: (Long) -> Unit,
+    onCycle: (EntryUi) -> Unit,
     onEdit: (EntryUi) -> Unit,
     onSetTranscribed: (Boolean) -> Unit,
 ) {
@@ -337,7 +403,7 @@ private fun DayContent(
         items(state.entries, key = { it.id }) { entry ->
             EntryRow(
                 entry = entry,
-                onCycle = { onCycleTask(entry.id) },
+                onCycle = { onCycle(entry) },
                 onEdit = { onEdit(entry) },
                 modifier = Modifier.animateItem(),
             )
@@ -579,14 +645,25 @@ private fun EntryRow(
                     )
                 }
             }
-            Text(
-                text = entry.text,
-                style = MaterialTheme.typography.bodyLarge,
-                color = textColor,
-                modifier = Modifier
+            Column(
+                Modifier
                     .weight(1f)
                     .padding(top = 12.dp, bottom = 12.dp, end = 12.dp),
-            )
+            ) {
+                Text(
+                    text = entry.text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = textColor,
+                )
+                // Adónde se migró la tarea: "→ 24 nov"
+                entry.migratedTo?.let { to ->
+                    Text(
+                        text = stringResource(R.string.migrated_to, to.shortDayMonth()),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.primary,
+                    )
+                }
+            }
         }
     }
 }
@@ -667,6 +744,8 @@ private fun EditEntryDialog(
     onDismiss: () -> Unit,
     onSave: (EntryType, TaskStatus, String) -> Unit,
     onDelete: () -> Unit,
+    onMigrateTomorrow: () -> Unit,
+    onMigratePick: () -> Unit,
 ) {
     var text by rememberSaveable(entry.id) { mutableStateOf(entry.text) }
     var type by rememberSaveable(entry.id) { mutableStateOf(entry.type) }
@@ -708,6 +787,15 @@ private fun EditEntryDialog(
                                 shape = CircleShape,
                             )
                         }
+                    }
+                }
+                if (entry.type == EntryType.TASK) {
+                    // Migrar: la tarea queda como ">" y se copia abierta al día elegido.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilledTonalButton(onClick = onMigrateTomorrow) {
+                            Text(stringResource(R.string.migrate_to_tomorrow))
+                        }
+                        TextButton(onClick = onMigratePick) { Text(stringResource(R.string.migrate_pick)) }
                     }
                 }
                 TextButton(onClick = onDelete) {

@@ -127,9 +127,35 @@ interface JournalDao {
         """
         SELECT (SELECT COUNT(*) FROM days) + (SELECT COUNT(*) FROM entries)
              + (SELECT COUNT(*) FROM habits) + (SELECT COUNT(*) FROM habit_checks)
+             + (SELECT COUNT(*) FROM month_entries)
         """,
     )
     fun observeAnyChange(): Flow<Int>
+
+    // Entradas por mes (tareas del mes y registro futuro)
+    @Query("SELECT * FROM month_entries WHERE ym BETWEEN :from AND :to AND deleted = 0 ORDER BY ym, position, id")
+    fun observeMonthEntries(from: Int, to: Int): Flow<List<MonthEntryEntity>>
+
+    @Query("SELECT * FROM month_entries WHERE id = :id")
+    suspend fun getMonthEntry(id: Long): MonthEntryEntity?
+
+    @Query("SELECT * FROM month_entries WHERE remoteId = :remoteId")
+    suspend fun getMonthEntryByRemoteId(remoteId: String): MonthEntryEntity?
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM month_entries WHERE ym = :ym")
+    suspend fun nextMonthPosition(ym: Int): Int
+
+    @Insert
+    suspend fun insertMonthEntry(entry: MonthEntryEntity): Long
+
+    @Update
+    suspend fun updateMonthEntry(entry: MonthEntryEntity)
+
+    @Upsert
+    suspend fun upsertMonthEntry(entry: MonthEntryEntity): Long
+
+    @Query("SELECT * FROM month_entries WHERE updatedAt > :since")
+    suspend fun monthEntriesChangedSince(since: Long): List<MonthEntryEntity>
 
     @Query("SELECT * FROM habits WHERE id = :id")
     suspend fun getHabit(id: Long): HabitEntity?

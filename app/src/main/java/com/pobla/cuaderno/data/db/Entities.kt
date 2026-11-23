@@ -71,6 +71,31 @@ data class EntryEntity(
     @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
     /** Id del documento en Firestore si la entrada se creó fuera de la app (p. ej. en la web) (v3). */
     val remoteId: String? = null,
+    /** Si la tarea se migró (>), día (epochDay) al que se copió (v4). */
+    val migratedTo: Long? = null,
+)
+
+/**
+ * Entrada de un mes (tareas del mes y registro futuro), no ligada a un día concreto (v5).
+ * [ym] = año * 100 + mes (p. ej. 202611).
+ */
+@Entity(
+    tableName = "month_entries",
+    indices = [Index("ym"), Index(value = ["remoteId"], unique = true)],
+)
+data class MonthEntryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val ym: Int,
+    val type: EntryType,
+    val status: TaskStatus = TaskStatus.OPEN,
+    val text: String,
+    val position: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+    @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
+    val remoteId: String? = null,
+    /** Si se pasó a otro mes, a cuál (ym). */
+    val migratedTo: Int? = null,
 )
 
 /** Foto adjunta a un día ([entryId] nulo) o a una entrada concreta. Se usará en la fase 3. */
