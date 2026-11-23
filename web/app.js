@@ -39,7 +39,7 @@ const T = {
     notAllowed: "No se pudo entrar: ", prev: "Anterior", next: "Siguiente",
     markDone: "Ya lo pasé", unmark: "Desmarcar", summaryPh: "Una frase para resumir el día",
     types: { TASK: "Tarea", EVENT: "Evento", NOTE: "Nota" }, addPh: (t) => `${t}…  (o evento · - nota)`,
-    del: "Borrar", saveError: "No se pudo guardar: ", prevMonth: "Mes anterior", nextMonth: "Mes siguiente",
+    toTomorrow: "→ Mañana", del: "Borrar", saveError: "No se pudo guardar: ", prevMonth: "Mes anterior", nextMonth: "Mes siguiente",
   },
   en: {
     appName: "Pocket Notebook", loginHint: "Your notebook, backed up from your phone. Only your account can see it.",
@@ -54,7 +54,7 @@ const T = {
     notAllowed: "Couldn't sign in: ", prev: "Previous", next: "Next",
     markDone: "Copied it", unmark: "Unmark", summaryPh: "One line to sum up the day",
     types: { TASK: "Task", EVENT: "Event", NOTE: "Note" }, addPh: (t) => `${t}…  (o event · - note)`,
-    del: "Delete", saveError: "Couldn't save: ", prevMonth: "Previous month", nextMonth: "Next month",
+    toTomorrow: "→ Tomorrow", del: "Delete", saveError: "Couldn't save: ", prevMonth: "Previous month", nextMonth: "Next month",
   },
 }[lang];
 document.documentElement.lang = lang;
@@ -121,8 +121,13 @@ function entryList(epoch, limit = Infinity, editable = false) {
       ? `<button class="sym btn-sym" data-cycle="${esc(e._doc)}">${esc(e.symbol)}</button>`
       : `<span class="sym">${esc(e.symbol)}</span>`;
     const del = editable ? `<button class="del" data-del="${esc(e._doc)}" aria-label="${T.del}" title="${T.del}">✕</button>` : "";
+    // Migración: "→ 24 nov" si ya se copió; si no, botón para copiarla a mañana.
+    const migrated = e.type === "TASK" && e.status === "MIGRATED";
+    const mig = e.migratedTo != null
+      ? `<span class="mig">→ ${fmt(e.migratedTo, { day: "numeric", month: "short" })}</span>`
+      : migrated && editable ? `<button class="mig-btn" data-migrate="${esc(e._doc)}">${T.toTomorrow}</button>` : "";
     return `<li class="entry ${finished(e) ? "finished" : ""} ${isNew(epoch, e.updatedAt) ? "new" : ""}">
-       ${sym}<span class="text">${esc(e.text)}</span>${del}</li>`;
+       ${sym}<span class="text">${esc(e.text)}${mig ? " " + mig : ""}</span>${del}</li>`;
   }).join("");
   const more = list.length > limit ? `<p class="empty">${T.more(list.length - limit)}</p>` : "";
   return `<ul class="entries">${items}</ul>${more}`;
@@ -305,6 +310,8 @@ document.addEventListener("click", (ev) => {
 document.addEventListener("click", (ev) => {
   const cycle = ev.target.closest("[data-cycle]")?.dataset.cycle;
   if (cycle) return save(cycleTask(cycle));
+  const mig = ev.target.closest("[data-migrate]")?.dataset.migrate;
+  if (mig) return save(migrateTask(mig, state.day + 1));
   const del = ev.target.closest("[data-del]")?.dataset.del;
   if (del) return save(deleteEntry(del));
   const habit = ev.target.closest("[data-habit]")?.dataset.habit;
@@ -388,6 +395,15 @@ async function cycleTask(docId) {
   if (!e || e.type !== "TASK") return;
   const status = NEXT_STATUS[e.status] || "OPEN";
   await updateDoc(doc(db, ...userPath(), "entries", docId), { status, symbol: STATUS_SYMBOL[status], updatedAt: now() });
+  await touchDay(e.epochDay);
+}
+async function migrateTask(docId, toEpoch) {
+  const e = state.entries.get(docId);
+  if (!e || e.type !== "TASK" || e.migratedTo === toEpoch) return;
+  const t = now();
+  await updateDoc(doc(db, ...userPath(), "entries", docId),
+    { status: "MIGRATED", symbol: STATUS_SYMBOL.MIGRATED, migratedTo: toEpoch, updatedAt: t });
+  await addEntry(toEpoch, "TASK", e.text);
   await touchDay(e.epochDay);
 }
 async function deleteEntry(docId) {

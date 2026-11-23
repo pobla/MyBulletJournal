@@ -208,4 +208,11 @@
     <string name="cloud_sync_now">Back up now</string>
     <string name="cloud_sign_out">Sign out</string>
     <string name="cloud_error">Error: %1$s</string>
+
+    <!-- Migration -->
+    <string name="migrated_snackbar">Task migrated</string>
+    <string name="migrate_copy_tomorrow">Copy to tomorrow</string>
+    <string name="migrate_to_tomorrow">Migrate to tomorrow</string>
+    <string name="migrate_pick">Another day…</string>
+    <string name="migrated_to">→ %1$s</string>
 </resources>

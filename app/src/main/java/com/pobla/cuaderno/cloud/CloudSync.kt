@@ -188,6 +188,7 @@ class CloudSync(
                     "createdAt" to e.createdAt,
                     "updatedAt" to e.updatedAt,
                     "deleted" to e.deleted,
+                    "migratedTo" to e.migratedTo,
                 )
             }
             dao.habitsChangedSince(since).forEach { h ->
@@ -302,6 +303,7 @@ class CloudSync(
                         local.copy(
                             epochDay = epochDay, type = type, status = status, text = text,
                             position = position, deleted = deleted, updatedAt = updatedAt,
+                            migratedTo = d.getLong("migratedTo"),
                         ),
                     )
                 } else {
@@ -317,6 +319,7 @@ class CloudSync(
                             updatedAt = updatedAt,
                             deleted = deleted,
                             remoteId = if (numericId == null) d.id else null,
+                            migratedTo = d.getLong("migratedTo"),
                         ),
                     )
                 }

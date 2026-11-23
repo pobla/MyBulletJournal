@@ -215,4 +215,11 @@
     <string name="cloud_sync_now">Copiar ahora</string>
     <string name="cloud_sign_out">Cerrar sesión</string>
     <string name="cloud_error">Error: %1$s</string>
+
+    <!-- Migración -->
+    <string name="migrated_snackbar">Tarea migrada</string>
+    <string name="migrate_copy_tomorrow">Copiar a mañana</string>
+    <string name="migrate_to_tomorrow">Migrar a mañana</string>
+    <string name="migrate_pick">Otro día…</string>
+    <string name="migrated_to">→ %1$s</string>
 </resources>

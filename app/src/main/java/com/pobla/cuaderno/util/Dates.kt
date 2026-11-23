@@ -31,6 +31,9 @@ fun formatTimestamp(epochMillis: Long): String =
 /** "Lunes 16 de noviembre" / "Monday, November 16" */
 fun LocalDate.weekdayDayMonth(): String = format(best("EEEEdMMMM")).capitalized()
 
+/** "24 nov" / "Nov 24" */
+fun LocalDate.shortDayMonth(): String = format(best("dMMM"))
+
 /** Inicial del día: L M X J V S D / M T W T F S S. */
 fun LocalDate.weekdayLetter(): String = dayOfWeek.letter()
 

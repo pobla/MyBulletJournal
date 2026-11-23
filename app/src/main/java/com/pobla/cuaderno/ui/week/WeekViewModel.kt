@@ -122,6 +122,7 @@ private fun RangeData.toUiState(start: LocalDate): WeekUiState {
                         status = it.status,
                         text = it.text,
                         changed = !transcribed && last != null && it.updatedAt > last,
+                        migratedTo = it.migratedTo?.let(LocalDate::ofEpochDay),
                     )
                 },
                 doneHabitIds = done,

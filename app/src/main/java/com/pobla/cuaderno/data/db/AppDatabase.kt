@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EntryEntity::class,
         PhotoEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +38,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v3 → v4: a qué día se migró una tarea. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE entries ADD COLUMN migratedTo INTEGER")
+            }
+        }
+
         fun build(context: Context): AppDatabase {
             // Hábitos iniciales en el idioma del móvil al instalar.
             val defaultHabits = context.resources.getStringArray(com.pobla.cuaderno.R.array.default_habits)
@@ -52,7 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
                         }
                     }
                 })
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
         }
     }

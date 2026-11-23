@@ -32,6 +32,8 @@ data class EntryUi(
     val status: TaskStatus,
     val text: String,
     val changed: Boolean,
+    /** Día al que se migró (si es una tarea ">"). */
+    val migratedTo: LocalDate? = null,
 )
 
 data class DayUiState(
@@ -93,6 +95,10 @@ class DayViewModel(
 
     fun updateEntry(entryId: Long, type: EntryType, status: TaskStatus, text: String) {
         appScope.launch { repository.updateEntry(entryId, type, status, text) }
+    }
+
+    fun migrateTask(entryId: Long, toDate: LocalDate) {
+        appScope.launch { repository.migrateTask(entryId, toDate) }
     }
 
     fun deleteEntry(entryId: Long) {
@@ -174,7 +180,11 @@ private fun DayData.toUiState(date: LocalDate): DayUiState {
             )
         },
         entries = entries.map {
-            EntryUi(it.id, it.type, it.status, it.text, changed = isNew(it.updatedAt))
+            EntryUi(
+                it.id, it.type, it.status, it.text,
+                changed = isNew(it.updatedAt),
+                migratedTo = it.migratedTo?.let(LocalDate::ofEpochDay),
+            )
         },
         summary = summary,
         summaryChanged = day != null && isNew(day.summaryUpdatedAt),

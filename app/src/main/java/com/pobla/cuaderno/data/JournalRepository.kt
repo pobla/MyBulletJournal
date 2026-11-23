@@ -141,6 +141,31 @@ class JournalRepository(
             markChanged(entry.epochDay, t)
         }
 
+    /**
+     * Migración de bullet journal: la tarea queda como ">" con la marca de adónde fue y se
+     * crea una copia abierta en [toDate]. Si ya estaba migrada a ese día, no duplica.
+     */
+    suspend fun migrateTask(entryId: Long, toDate: LocalDate) = db.withTransaction {
+        val entry = dao.getEntry(entryId) ?: return@withTransaction
+        if (entry.type != EntryType.TASK) return@withTransaction
+        val to = toDate.toEpochDay()
+        if (entry.migratedTo == to) return@withTransaction
+        val t = now()
+        dao.updateEntry(entry.copy(status = TaskStatus.MIGRATED, migratedTo = to, updatedAt = t))
+        dao.insertEntry(
+            EntryEntity(
+                epochDay = to,
+                type = EntryType.TASK,
+                text = entry.text,
+                position = dao.nextEntryPosition(to),
+                createdAt = t,
+                updatedAt = t,
+            ),
+        )
+        markChanged(entry.epochDay, t)
+        markChanged(to, t)
+    }
+
     suspend fun deleteEntry(entryId: Long) = db.withTransaction {
         val entry = dao.getEntry(entryId) ?: return@withTransaction
         val t = now()

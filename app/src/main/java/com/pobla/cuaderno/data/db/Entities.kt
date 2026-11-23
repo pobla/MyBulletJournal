@@ -71,6 +71,8 @@ data class EntryEntity(
     @ColumnInfo(defaultValue = "0") val deleted: Boolean = false,
     /** Id del documento en Firestore si la entrada se creó fuera de la app (p. ej. en la web) (v3). */
     val remoteId: String? = null,
+    /** Si la tarea se migró (>), día (epochDay) al que se copió (v4). */
+    val migratedTo: Long? = null,
 )
 
 /** Foto adjunta a un día ([entryId] nulo) o a una entrada concreta. Se usará en la fase 3. */
