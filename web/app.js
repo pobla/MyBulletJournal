@@ -39,7 +39,7 @@ const T = {
     notAllowed: "No se pudo entrar: ", prev: "Anterior", next: "Siguiente",
     markDone: "Ya lo pasé", unmark: "Desmarcar", summaryPh: "Una frase para resumir el día",
     types: { TASK: "Tarea", EVENT: "Evento", NOTE: "Nota" }, addPh: (t) => `${t}…  (o evento · - nota)`,
-    del: "Borrar", saveError: "No se pudo guardar: ",
+    del: "Borrar", saveError: "No se pudo guardar: ", prevMonth: "Mes anterior", nextMonth: "Mes siguiente",
   },
   en: {
     appName: "Pocket Notebook", loginHint: "Your notebook, backed up from your phone. Only your account can see it.",
@@ -54,7 +54,7 @@ const T = {
     notAllowed: "Couldn't sign in: ", prev: "Previous", next: "Next",
     markDone: "Copied it", unmark: "Unmark", summaryPh: "One line to sum up the day",
     types: { TASK: "Task", EVENT: "Event", NOTE: "Note" }, addPh: (t) => `${t}…  (o event · - note)`,
-    del: "Delete", saveError: "Couldn't save: ",
+    del: "Delete", saveError: "Couldn't save: ", prevMonth: "Previous month", nextMonth: "Next month",
   },
 }[lang];
 document.documentElement.lang = lang;
@@ -79,7 +79,7 @@ const stamp = (ms) => new Intl.DateTimeFormat(lang, { day: "numeric", month: "sh
 
 // ---------- Estado ----------
 const state = {
-  view: "day", day: todayEpoch(), weekStart: startOfWeek(todayEpoch()),
+  view: "day", day: todayEpoch(), weekStart: startOfWeek(todayEpoch()), cal: null, // cal = {y, m} del mini calendario
   days: new Map(), entries: new Map(), habits: new Map(), checks: new Map(), lastSyncAt: 0,
 };
 let unsubscribers = [];
@@ -148,14 +148,18 @@ function renderDay() {
       ${isToday ? "" : `<button class="btn small" data-act="today">${T.today}</button>`}
       <button class="icon-btn" data-act="next" aria-label="${T.next}">›</button>
     </div>
+    <div class="day-layout"><section class="day-side">
     ${status ? `<div class="status ${status}"><span>${statusText}${d?.lastTranscribedAt && status === "done" ? ` · <span class="empty">${stamp(d.lastTranscribedAt)}</span>` : ""}</span>
       <button class="btn small ${status === "done" ? "" : "primary"}" data-act="${status === "done" ? "unmark" : "markDone"}">${status === "done" ? T.unmark : T.markDone}</button></div>` : ""}
     <div class="section-title">${T.habits}</div>
     <div class="chips">${habits.length ? habits.map((h) => `<button class="chip ${done.has(h.id) ? "on" : ""}" data-habit="${h.id}">${done.has(h.id) ? "✓ " : ""}${esc(h.name)}</button>`).join("") : `<span class="empty">${T.noHabits}</span>`}</div>
     <div class="section-title">${T.summary}</div>
     <textarea id="summary" class="summary-input" rows="2" placeholder="${T.summaryPh}">${esc(d?.summary || "")}</textarea>
-    <div class="section-title">${T.log}</div>
-    ${entryList(e, Infinity, true)}`;
+    </section>
+    <section class="day-main">
+      <div class="section-title">${T.log}</div>
+      <div class="log-card">${entryList(e, Infinity, true)}<div id="add-slot" class="add-slot"></div></div>
+    </section></div>`;
 }
 
 function renderWeek() {
@@ -173,7 +177,7 @@ function renderWeek() {
   const cards = days.map((e) => {
     const d = state.days.get(e);
     return `<div class="card clickable ${e === today ? "today" : ""}" data-open="${e}">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>${dayMonth(e)}</strong>${pill(dayStatus(e))}</div>
+      <div class="wk-head"><strong>${weekdayName(e)}</strong><span class="empty">${fmt(e, { day: "numeric", month: "short" })}</span>${pill(dayStatus(e))}</div>
       ${d?.summary ? `<p class="summary" style="margin:4px 0">“${esc(d.summary)}”</p>` : ""}
       ${entryList(e, 6)}</div>`;
   }).join("");
@@ -186,13 +190,13 @@ function renderWeek() {
       <button class="icon-btn" data-act="nextWeek" aria-label="${T.next}">›</button>
     </div>
     ${grid}
-    <div class="section-title">${T.days}</div>${cards}`;
+    <div class="section-title">${T.days}</div><div class="week-days">${cards}</div>`;
 }
 
 function renderPending() {
   const list = pendingDays();
   if (!list.length) return `<h2>${T.pendingTitle}</h2><p class="empty">${T.allDone}</p>`;
-  return `<h2>${T.pendingTitle}</h2>` + list.map((e) => {
+  return `<h2>${T.pendingTitle}</h2><div class="pending-grid">` + list.map((e) => {
     const d = state.days.get(e);
     const parts = [];
     const n = entriesOf(e).length; if (n) parts.push(T.entries(n));
@@ -201,7 +205,45 @@ function renderPending() {
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>${e === todayEpoch() ? `${T.today} · ` : ""}${dayMonth(e)}</strong>${pill(dayStatus(e))}</div>
       <div class="empty">${parts.join(" · ")}</div>
       ${d?.summary ? `<p class="summary" style="margin:4px 0 0">“${esc(d.summary)}”</p>` : ""}</div>`;
+  }).join("") + "</div>";
+}
+
+// ---------- Barra lateral (escritorio): calendario del mes y pendientes ----------
+const desktopQuery = matchMedia("(min-width: 1000px)");
+function monthOf(epoch) { const d = toDate(epoch); return { y: d.getUTCFullYear(), m: d.getUTCMonth() }; }
+function renderSidebar() {
+  if (!desktopQuery.matches) return "";
+  const { y, m } = state.cal || monthOf(state.day);
+  const first = Math.floor(Date.UTC(y, m, 1) / DAY_MS);
+  const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const lead = (toDate(first).getUTCDay() + 6) % 7; // huecos hasta el lunes
+  const today = todayEpoch();
+  const pending = new Set(pendingDays());
+  const withNotes = new Set([...state.entries.values()].filter((e) => !e.deleted).map((e) => e.epochDay));
+  const title = cap(new Intl.DateTimeFormat(lang, { month: "long", year: "numeric", timeZone: "UTC" }).format(toDate(first)));
+  const weekdays = [...Array(7).keys()].map((i) => `<span class="wd">${weekLetter(startOfWeek(today) + i)}</span>`).join("");
+  const blanks = "<span></span>".repeat(lead);
+  const cells = [...Array(daysInMonth).keys()].map((i) => {
+    const e = first + i;
+    const cls = [
+      "cal-day",
+      e === today ? "today" : "",
+      e === state.day && state.view === "day" ? "selected" : "",
+      pending.has(e) ? "pend" : withNotes.has(e) ? "has" : "",
+    ].join(" ");
+    return `<button class="${cls}" data-open="${e}">${i + 1}</button>`;
   }).join("");
+  const list = [...pending].slice(-8).reverse().map((e) =>
+    `<button class="side-item" data-open="${e}"><span>${dayMonth(e)}</span>${pill(dayStatus(e))}</button>`).join("");
+  return `
+    <div class="mini-cal">
+      <div class="head">
+        <button data-act="calPrev" aria-label="${T.prevMonth}">‹</button><strong>${title}</strong>
+        <button data-act="calNext" aria-label="${T.nextMonth}">›</button>
+      </div>
+      <div class="cal-grid">${weekdays}${blanks}${cells}</div>
+    </div>
+    ${list ? `<div class="side-list"><div class="section-title">${T.tabPending}</div>${list}</div>` : ""}`;
 }
 
 let lastRenderedKey = "";
@@ -211,7 +253,15 @@ function render() {
   // Si se está escribiendo la frase del día, no la pisamos al refrescar.
   const active = document.activeElement;
   const editingSummary = active && active.id === "summary" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
+  const bar = $("#add-bar");
+  const typing = document.activeElement === $("#add-text");
+  $("#app").appendChild(bar); // sacarla antes de reescribir la vista (conserva lo escrito)
   view.innerHTML = { day: renderDay, week: renderWeek, pending: renderPending }[state.view]();
+  $("#sidebar").innerHTML = renderSidebar();
+  const slot = $("#add-slot");
+  const inline = desktopQuery.matches && slot;
+  if (inline) slot.appendChild(bar);
+  if (typing) $("#add-text").focus();
   if (editingSummary && $("#summary")) {
     const ta = $("#summary"); ta.value = editingSummary.value; ta.focus(); ta.setSelectionRange(editingSummary.start, editingSummary.end);
   }
@@ -219,8 +269,8 @@ function render() {
   const key = `${state.view}:${state.day}:${state.weekStart}`;
   if (key !== lastRenderedKey) { view.style.animation = "none"; void view.offsetWidth; view.style.animation = ""; lastRenderedKey = key; }
   const showBar = state.view === "day";
-  $("#add-bar").hidden = !showBar;
-  document.body.classList.toggle("with-bar", showBar);
+  bar.hidden = !showBar;
+  document.body.classList.toggle("with-bar", showBar && !inline);
   updateAddBar();
   const n = pendingDays().length;
   const badge = $("#pending-badge");
@@ -233,12 +283,18 @@ document.addEventListener("click", (ev) => {
   const tab = ev.target.closest(".tab");
   if (tab) { state.view = tab.dataset.view; render(); return; }
   const open = ev.target.closest("[data-open]");
-  if (open) { state.day = Number(open.dataset.open); state.view = "day"; render(); return; }
+  if (open) { state.day = Number(open.dataset.open); state.view = "day"; state.cal = monthOf(state.day); render(); return; }
   const act = ev.target.closest("[data-act]")?.dataset.act;
   if (!act) return;
   if (act === "prev") state.day -= 1;
   if (act === "next") state.day += 1;
   if (act === "today") state.day = todayEpoch();
+  if (["prev", "next", "today"].includes(act)) state.cal = monthOf(state.day);
+  if (act === "calPrev" || act === "calNext") {
+    const { y, m } = state.cal || monthOf(state.day);
+    const d = new Date(Date.UTC(y, m + (act === "calNext" ? 1 : -1), 1));
+    state.cal = { y: d.getUTCFullYear(), m: d.getUTCMonth() };
+  }
   if (act === "prevWeek") state.weekStart -= 7;
   if (act === "nextWeek") state.weekStart += 7;
   if (act === "thisWeek") state.weekStart = startOfWeek(todayEpoch());
@@ -280,10 +336,11 @@ $("#add-bar").addEventListener("submit", (ev) => {
   save(addEntry(state.day, addType, text));
   input.value = ""; addType = "TASK"; updateAddBar(); input.focus();
 });
+desktopQuery.addEventListener("change", () => { if (auth.currentUser) render(); });
 document.addEventListener("keydown", (ev) => {
   if (state.view !== "day" || ev.target.closest("input, textarea")) return;
-  if (ev.key === "ArrowLeft") { state.day -= 1; render(); }
-  if (ev.key === "ArrowRight") { state.day += 1; render(); }
+  if (ev.key === "ArrowLeft") { state.day -= 1; state.cal = monthOf(state.day); render(); }
+  if (ev.key === "ArrowRight") { state.day += 1; state.cal = monthOf(state.day); render(); }
 });
 
 $("#signin").addEventListener("click", async () => {

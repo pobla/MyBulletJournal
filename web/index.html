@@ -30,7 +30,11 @@
       </nav>
       <button id="signout" class="btn text" data-i18n="signOut"></button>
     </header>
-    <main id="view" class="view"></main>
+    <div class="shell">
+      <!-- Solo en pantallas anchas: calendario del mes y pendientes -->
+      <aside id="sidebar" class="sidebar"></aside>
+      <main id="view" class="view"></main>
+    </div>
     <!-- Barra para añadir al día que se está viendo (fuera de la vista para no perder lo escrito al refrescar) -->
     <form id="add-bar" class="add-bar" hidden autocomplete="off">
       <button type="button" id="add-type" class="icon-btn type">•</button>
