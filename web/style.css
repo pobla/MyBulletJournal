@@ -1,0 +1,145 @@
+/* Paleta "papel y tinta" (la misma que la app), con modo oscuro */
+:root {
+  --bg: #FBF8F1;
+  --surface: #F2ECE1;
+  --surface-high: #EDE6DA;
+  --ink: #1E1B16;
+  --muted: #6B6458;
+  --primary: #3E5A7A;
+  --on-primary: #FFFFFF;
+  --primary-soft: #D3E3F7;
+  --accent: #B4502C;
+  --accent-soft: #FFDBCC;
+  --done-soft: #EDE1CF;
+  --outline: #CFC6B8;
+  --radius: 20px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1B1A17;
+    --surface: #26241F;
+    --surface-high: #302E29;
+    --ink: #E9E2D8;
+    --muted: #B3AA9C;
+    --primary: #A9C7EC;
+    --on-primary: #0F2C4A;
+    --primary-soft: #274361;
+    --accent: #FFB59A;
+    --accent-soft: #7A3018;
+    --done-soft: #4E4538;
+    --outline: #4A463E;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+[hidden] { display: none !important; }
+
+/* Botones */
+.btn {
+  font: inherit; font-weight: 600; border: 0; cursor: pointer;
+  border-radius: 999px; padding: 10px 20px; background: var(--surface-high); color: var(--ink);
+  transition: transform .15s ease, background .2s ease;
+}
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.text { background: transparent; color: var(--primary); padding: 8px 12px; }
+.btn.small { padding: 6px 14px; font-size: 14px; }
+.icon-btn {
+  border: 0; background: var(--surface-high); color: var(--ink); width: 40px; height: 40px;
+  border-radius: 50%; font-size: 20px; cursor: pointer;
+}
+
+/* Entrada */
+.login {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 24px 16px; text-align: center;
+}
+.login-icon { width: 96px; height: 96px; border-radius: 28px; }
+.login h1 { margin: 8px 0 0; }
+.login p { color: var(--muted); max-width: 360px; }
+.error { color: var(--accent); }
+
+/* Barra superior */
+.topbar {
+  position: sticky; top: 0; z-index: 2; background: var(--bg);
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--outline);
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.brand img { width: 32px; height: 32px; border-radius: 9px; }
+.tabs { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 999px; margin-left: auto; }
+.tab {
+  font: inherit; font-weight: 600; border: 0; background: transparent; color: var(--muted);
+  padding: 6px 14px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+}
+.tab.active { background: var(--primary); color: var(--on-primary); }
+.badge {
+  background: var(--accent); color: #fff; border-radius: 999px; font-size: 12px; padding: 0 7px; line-height: 18px;
+}
+@media (max-width: 560px) {
+  .tabs { order: 3; width: 100%; margin-left: 0; justify-content: space-between; }
+  .tab { flex: 1; justify-content: center; }
+  #signout { margin-left: auto; }
+}
+
+/* Contenido */
+.view { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.nav { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.nav .title { flex: 1; }
+.nav h2 { margin: 0; font-size: 24px; }
+.nav .sub { color: var(--muted); font-size: 14px; }
+.section-title {
+  color: var(--primary); font-size: 13px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; margin: 20px 0 8px;
+}
+.card { background: var(--surface); border-radius: var(--radius); padding: 14px 18px; }
+.card + .card { margin-top: 8px; }
+.card.clickable { cursor: pointer; transition: background .2s ease; }
+.card.clickable:hover { background: var(--surface-high); }
+.card.today { outline: 1.5px solid var(--primary); }
+
+.status { display: flex; align-items: center; gap: 8px; border-radius: var(--radius); padding: 12px 18px; font-weight: 600; }
+.status.done { background: var(--done-soft); }
+.status.changed { background: var(--accent-soft); }
+.status.pending { background: var(--surface-high); }
+
+.pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 1px 8px; }
+.pill.done { background: var(--done-soft); }
+.pill.changed { background: var(--accent-soft); }
+.pill.pending { background: var(--surface-high); color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border-radius: 999px; padding: 6px 14px; border: 1px solid var(--outline); color: var(--muted); }
+.chip.on { background: var(--primary-soft); border-color: transparent; color: var(--ink); font-weight: 600; }
+
+.summary { font-style: italic; color: var(--muted); }
+.entries { list-style: none; margin: 0; padding: 0; }
+.entry { display: flex; gap: 10px; padding: 6px 0; align-items: baseline; }
+.entry .sym { width: 18px; text-align: center; font-weight: 700; color: var(--primary); flex: none; }
+.entry.finished { color: var(--muted); }
+.entry.finished .sym { color: var(--muted); }
+.empty { color: var(--muted); }
+
+/* Rejilla semanal de hábitos */
+.grid { display: grid; grid-template-columns: minmax(70px, 1.4fr) repeat(7, 1fr); gap: 4px 2px; align-items: center; }
+.grid .h { text-align: center; font-size: 12px; color: var(--muted); }
+.grid .h.today { color: var(--primary); font-weight: 700; }
+.grid .name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto; border: 1px solid var(--outline); }
+.dot.on { background: var(--primary); border-color: transparent; }
+
+.footer { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 16px 24px; }
+
+.loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+.loading .dot { width: 14px; height: 14px; border: 0; background: var(--primary); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.6); opacity: .4; } }

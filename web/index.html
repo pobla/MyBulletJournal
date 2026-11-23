@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cuaderno de bolsillo</title>
+  <meta name="theme-color" content="#FBF8F1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1B1A17" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Pantalla de entrada -->
+  <main id="login" class="login" hidden>
+    <img src="icon.svg" alt="" class="login-icon">
+    <h1 data-i18n="appName"></h1>
+    <p data-i18n="loginHint"></p>
+    <button id="signin" class="btn primary" data-i18n="signIn"></button>
+    <p id="login-error" class="error" hidden></p>
+  </main>
+
+  <!-- App -->
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="brand"><img src="icon.svg" alt=""><span data-i18n="appName"></span></div>
+      <nav class="tabs" role="tablist">
+        <button class="tab" data-view="day" data-i18n="tabDay"></button>
+        <button class="tab" data-view="week" data-i18n="tabWeek"></button>
+        <button class="tab" data-view="pending"><span data-i18n="tabPending"></span><span id="pending-badge" class="badge" hidden></span></button>
+      </nav>
+      <button id="signout" class="btn text" data-i18n="signOut"></button>
+    </header>
+    <main id="view" class="view"></main>
+    <footer class="footer"><span id="who"></span> · <span id="last-sync"></span></footer>
+  </div>
+
+  <div id="loading" class="loading"><span class="dot"></span></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

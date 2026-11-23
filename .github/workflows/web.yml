@@ -1,0 +1,54 @@
+name: Web y reglas (Firebase)
+
+# Despliega la web (carpeta web/) en Firebase Hosting y las reglas de Firestore.
+# Necesita el secreto FIREBASE_SERVICE_ACCOUNT (JSON de una cuenta de servicio del proyecto).
+on:
+  push:
+    paths:
+      - "web/**"
+      - "firestore.rules"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Comprobar secreto
+        id: secret
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::warning::Falta el secreto FIREBASE_SERVICE_ACCOUNT; no se despliega."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Desplegar web y reglas
+        if: steps.secret.outputs.ok == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          npx --yes firebase-tools@15.36.0 deploy \
+            --only hosting,firestore:rules \
+            --project cuaderno-de-bolsillo \
+            --non-interactive
+
+      - name: Borrar credenciales
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
