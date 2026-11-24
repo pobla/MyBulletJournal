@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.pobla.cuaderno.model.Mood
+import com.pobla.cuaderno.model.Weather
 
 data class WeekHabit(val id: Long, val name: String)
 
@@ -33,6 +35,8 @@ data class WeekDayUi(
     val entries: List<EntryUi>,
     val doneHabitIds: Set<Long>,
     val status: TranscribeStatus,
+    val weather: Weather? = null,
+    val mood: Mood? = null,
 )
 
 data class WeekUiState(
@@ -126,8 +130,11 @@ private fun RangeData.toUiState(start: LocalDate): WeekUiState {
                     )
                 },
                 doneHabitIds = done,
+                weather = Weather.fromKey(day?.weather),
+                mood = Mood.fromLevel(day?.mood),
                 status = transcribeStatus(
-                    hasContent = dayEntries.isNotEmpty() || done.isNotEmpty() || summary.isNotBlank(),
+                    hasContent = dayEntries.isNotEmpty() || done.isNotEmpty() || summary.isNotBlank() ||
+                        day?.weather != null || day?.mood != null,
                     transcribed = transcribed,
                     lastTranscribedAt = last,
                 ),

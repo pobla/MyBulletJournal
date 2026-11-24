@@ -174,6 +174,9 @@ class CloudSync(
                     "transcribed" to d.transcribed,
                     "lastTranscribedAt" to d.lastTranscribedAt,
                     "updatedAt" to d.updatedAt,
+                    "weather" to d.weather,
+                    "mood" to d.mood,
+                    "trackersUpdatedAt" to d.trackersUpdatedAt,
                 )
             }
             dao.entriesChangedSince(since).forEach { e ->
@@ -298,6 +301,9 @@ class CloudSync(
                         transcribed = d.getBoolean("transcribed") ?: false,
                         lastTranscribedAt = d.getLong("lastTranscribedAt") ?: local?.lastTranscribedAt,
                         updatedAt = updatedAt,
+                        weather = if (d.contains("weather")) d.getString("weather") else local?.weather,
+                        mood = if (d.contains("mood")) d.getLong("mood")?.toInt() else local?.mood,
+                        trackersUpdatedAt = d.getLong("trackersUpdatedAt") ?: local?.trackersUpdatedAt ?: 0L,
                     ),
                 )
             }

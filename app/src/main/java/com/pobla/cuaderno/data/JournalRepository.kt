@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import com.pobla.cuaderno.data.db.MonthEntryEntity
 import java.time.YearMonth
+import com.pobla.cuaderno.model.Mood
+import com.pobla.cuaderno.model.Weather
 
 /** Todo lo que se guarda de un día, tal cual sale de la base de datos. */
 data class DayData(
@@ -192,6 +194,21 @@ class JournalRepository(
         dao.upsertDay(
             day.copy(summary = summary, summaryUpdatedAt = t, transcribed = false, updatedAt = t),
         )
+    }
+
+    /** Tiempo del día (null = quitar). Cuenta como cambio: el día vuelve a pendiente. */
+    suspend fun setWeather(date: LocalDate, weather: Weather?) = setTrackers(date) { it.copy(weather = weather?.key) }
+
+    /** Ánimo del día (null = quitar). */
+    suspend fun setMood(date: LocalDate, mood: Mood?) = setTrackers(date) { it.copy(mood = mood?.level) }
+
+    private suspend fun setTrackers(date: LocalDate, change: (DayEntity) -> DayEntity) = db.withTransaction {
+        val d = date.toEpochDay()
+        val day = dao.getDay(d) ?: DayEntity(epochDay = d)
+        val changed = change(day)
+        if (changed == day) return@withTransaction
+        val t = now()
+        dao.upsertDay(changed.copy(trackersUpdatedAt = t, transcribed = false, updatedAt = t))
     }
 
     suspend fun setTranscribed(date: LocalDate, transcribed: Boolean) = db.withTransaction {

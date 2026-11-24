@@ -22,6 +22,10 @@ data class DayEntity(
     val transcribed: Boolean = false,
     val lastTranscribedAt: Long? = null,
     val updatedAt: Long = 0,
+    /** Tiempo (clave de [com.pobla.cuaderno.model.Weather]) y ánimo (1–5) del día (v6). */
+    val weather: String? = null,
+    val mood: Int? = null,
+    @ColumnInfo(defaultValue = "0") val trackersUpdatedAt: Long = 0,
 )
 
 @Entity(tableName = "habits")
@@ -126,4 +130,5 @@ data class PendingDayRow(
     val lastTranscribedAt: Long?,
     val entryCount: Int,
     val habitCount: Int,
+    val hasTrackers: Boolean = false,
 )

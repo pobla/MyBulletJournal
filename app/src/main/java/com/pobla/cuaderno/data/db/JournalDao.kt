@@ -14,12 +14,13 @@ const val PENDING_DAYS_QUERY = """
         SELECT d.epochDay AS epochDay,
                d.summary AS summary,
                d.lastTranscribedAt AS lastTranscribedAt,
+               (d.weather IS NOT NULL OR d.mood IS NOT NULL) AS hasTrackers,
                (SELECT COUNT(*) FROM entries e WHERE e.epochDay = d.epochDay AND e.deleted = 0) AS entryCount,
                (SELECT COUNT(*) FROM habit_checks h WHERE h.epochDay = d.epochDay AND h.done = 1) AS habitCount
         FROM days d
         WHERE d.transcribed = 0
     )
-    WHERE entryCount > 0 OR habitCount > 0 OR TRIM(summary) != '' OR lastTranscribedAt IS NOT NULL
+    WHERE entryCount > 0 OR habitCount > 0 OR TRIM(summary) != '' OR lastTranscribedAt IS NOT NULL OR hasTrackers
     ORDER BY epochDay
 """
 

@@ -84,6 +84,13 @@ import com.pobla.cuaderno.util.monthYear
 import com.pobla.cuaderno.util.weekdayLetter
 import java.time.LocalDate
 import java.time.YearMonth
+import com.pobla.cuaderno.ui.components.WeatherIcon
+import com.pobla.cuaderno.ui.components.MoodDot
+import com.pobla.cuaderno.model.Mood
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 
 @Composable
 fun MonthRoute(
@@ -227,6 +234,8 @@ fun MonthScreen(
                         modifier = Modifier.animateItem(),
                     )
                 }
+                item(key = "tracker_title") { SectionTitle(stringResource(R.string.section_trackers)) }
+                item(key = "tracker") { MonthTracker(state = state, onOpenDay = onOpenDay) }
                 item(key = "cal_title") { SectionTitle(stringResource(R.string.month_calendar)) }
                 items(state.days, key = { "d_${it.date.toEpochDay()}" }) { day ->
                     CalendarLine(day = day, onClick = { onOpenDay(day.date) })
@@ -383,6 +392,13 @@ private fun CalendarLine(day: MonthDayUi, onClick: () -> Unit) {
                     )
                 }
             }
+            // Tiempo y ánimo del día
+            day.weather?.let {
+                Box(Modifier.padding(top = 4.dp, end = 4.dp)) { WeatherIcon(it, 18.dp) }
+            }
+            day.mood?.let {
+                Box(Modifier.padding(top = 3.dp, end = 6.dp)) { MoodDot(it, 20.dp) }
+            }
             val dotColor = when (day.status) {
                 TranscribeStatus.PENDING -> colors.outline
                 TranscribeStatus.CHANGED -> colors.tertiary
@@ -391,6 +407,74 @@ private fun CalendarLine(day: MonthDayUi, onClick: () -> Unit) {
             if (dotColor != null) {
                 // Punto de "pendiente de pasar al cuaderno" (naranja si hay cambios)
                 Surface(color = dotColor, shape = CircleShape, modifier = Modifier.padding(top = 8.dp, end = 4.dp).size(8.dp)) {}
+            }
+        }
+    }
+}
+
+/**
+ * Tracker del mes como en el cuaderno: cuadrícula L–D con el color del ánimo de fondo
+ * y el símbolo del tiempo de cada día. Toca un día para abrirlo.
+ */
+@Composable
+private fun MonthTracker(state: MonthUiState, onOpenDay: (LocalDate) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val lead = state.month.atDay(1).dayOfWeek.value - 1 // huecos hasta el lunes
+    val cells: List<MonthDayUi?> = List(lead) { null } + state.days
+    Surface(color = colors.surfaceContainerHigh, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row {
+                (0 until 7).forEach { i ->
+                    Text(
+                        state.month.atDay(1).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                            .plusDays(i.toLong()).weekdayLetter(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            cells.chunked(7).forEach { week ->
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    (0 until 7).forEach { i ->
+                        val day = week.getOrNull(i)
+                        Box(Modifier.weight(1f).aspectRatio(1f)) {
+                            if (day != null) {
+                                val bg = day.mood?.let { Color(it.color).copy(alpha = 0.85f) } ?: colors.surface
+                                Surface(
+                                    onClick = { onOpenDay(day.date) },
+                                    shape = MaterialTheme.shapes.small,
+                                    color = bg,
+                                    border = if (day.isToday) BorderStroke(1.5.dp, colors.primary) else null,
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    Box(Modifier.padding(3.dp)) {
+                                        Text(
+                                            "${day.date.dayOfMonth}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (day.mood != null) Color(0xFF1E1B16) else colors.onSurfaceVariant,
+                                            modifier = Modifier.align(Alignment.TopStart),
+                                        )
+                                        day.weather?.let {
+                                            Box(Modifier.align(Alignment.BottomEnd)) {
+                                                WeatherIcon(
+                                                    it,
+                                                    16.dp,
+                                                    tint = if (day.mood != null) Color(0xFF1E1B16) else colors.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Leyenda de colores del ánimo
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 4.dp, start = 4.dp)) {
+                Mood.entries.forEach { MoodDot(it, 16.dp) }
             }
         }
     }
