@@ -33,7 +33,10 @@ const T = {
     signIn: "Entrar con Google", signOut: "Salir", tabDay: "Día", tabWeek: "Semana", tabMonth: "Mes", tabPending: "Pendientes",
     monthMode: "Mes", futureMode: "Futuro", futureTitle: "Registro futuro", monthTasks: "Tareas del mes",
     calendar: "Calendario", monthEmpty: "Nada todavía", trackers: "Tiempo y ánimo", tracking: "Seguimiento",
-    weather: "Tiempo", mood: "Ánimo",
+    weather: "Tiempo", mood: "Ánimo", edit: "Editar", done: "Hecho", editHabits: "Hábitos",
+    newHabit: "Nuevo hábito", moveUp: "Subir", moveDown: "Bajar", archive: "Quitar",
+    habitsHint: "Al quitar un hábito se conserva lo que ya marcaste en días pasados.",
+    archiveConfirm: (n) => `¿Quitar «${n}»? Dejará de aparecer en los días nuevos; lo ya marcado se conserva.`,
     wx: { sun: "Sol", partly: "Sol y nubes", cloud: "Nublado", rain: "Lluvia", storm: "Tormenta", wind: "Viento", snow: "Nieve" },
     moods: { 5: "Genial", 4: "Bien", 3: "Normal", 2: "Regular", 1: "Mal" }, toNextMonth: (m) => `Pasar a ${m.toLowerCase()}`,
     today: "Hoy", thisWeek: "Esta semana", week: "Semana", habits: "Hábitos", summary: "Frase del día", log: "Registro",
@@ -53,7 +56,10 @@ const T = {
     signIn: "Sign in with Google", signOut: "Sign out", tabDay: "Day", tabWeek: "Week", tabMonth: "Month", tabPending: "To copy",
     monthMode: "Month", futureMode: "Future log", futureTitle: "Future log", monthTasks: "This month",
     calendar: "Calendar", monthEmpty: "Nothing yet", trackers: "Weather & mood", tracking: "Tracking",
-    weather: "Weather", mood: "Mood",
+    weather: "Weather", mood: "Mood", edit: "Edit", done: "Done", editHabits: "Habits",
+    newHabit: "New habit", moveUp: "Move up", moveDown: "Move down", archive: "Remove",
+    habitsHint: "Removing a habit keeps what you already ticked on past days.",
+    archiveConfirm: (n) => `Remove “${n}”? It won't show on new days; what you ticked is kept.`,
     wx: { sun: "Sunny", partly: "Sun and clouds", cloud: "Cloudy", rain: "Rain", storm: "Storm", wind: "Windy", snow: "Snow" },
     moods: { 5: "Great", 4: "Good", 3: "Okay", 2: "Meh", 1: "Bad" }, toNextMonth: (m) => `Move to ${m}`,
     today: "Today", thisWeek: "This week", week: "Week", habits: "Habits", summary: "Line of the day", log: "Log",
@@ -180,7 +186,7 @@ function renderDay() {
     <div class="day-layout"><section class="day-side">
     ${status ? `<div class="status ${status}"><span>${statusText}${d?.lastTranscribedAt && status === "done" ? ` · <span class="empty">${stamp(d.lastTranscribedAt)}</span>` : ""}</span>
       <button class="btn small ${status === "done" ? "" : "primary"}" data-act="${status === "done" ? "unmark" : "markDone"}">${status === "done" ? T.unmark : T.markDone}</button></div>` : ""}
-    <div class="section-title">${T.habits}</div>
+    <div class="title-row"><div class="section-title">${T.habits}</div><button class="btn text" data-act="editHabits">${T.edit}</button></div>
     <div class="chips">${habits.length ? habits.map((h) => `<button class="chip ${done.has(h.id) ? "on" : ""}" data-habit="${h.id}">${done.has(h.id) ? "✓ " : ""}${esc(h.name)}</button>`).join("") : `<span class="empty">${T.noHabits}</span>`}</div>
     <div class="section-title">${[T.trackers, d?.weather ? T.wx[d.weather] : null, d?.mood ? T.moods[d.mood] : null].filter(Boolean).join(" · ")}</div>
     <div class="picker ${trackersNew ? "changed" : ""}">${Object.keys(WX_ICONS).map((k) =>
@@ -334,6 +340,23 @@ function renderMonth() {
     </div>`;
 }
 
+// ---------- Editor de hábitos ----------
+function renderHabitsEditor() {
+  const list = activeHabits();
+  $("#habits-edit").innerHTML = list.map((h, i) => `
+    <li>
+      <input id="hname-${h.id}" value="${esc(h.name)}" data-hrename="${h.id}" aria-label="${esc(h.name)}">
+      <button type="button" data-hmove="${h.id}" data-dir="-1" title="${T.moveUp}" ${i === 0 ? "disabled" : ""}>↑</button>
+      <button type="button" data-hmove="${h.id}" data-dir="1" title="${T.moveDown}" ${i === list.length - 1 ? "disabled" : ""}>↓</button>
+      <button type="button" data-harchive="${h.id}" title="${T.archive}">✕</button>
+    </li>`).join("");
+}
+function openHabitsEditor() {
+  renderHabitsEditor();
+  $("#habit-new").placeholder = T.newHabit;
+  $("#habits-dialog").showModal();
+}
+
 // ---------- Barra lateral (escritorio): calendario del mes y pendientes ----------
 const desktopQuery = matchMedia("(min-width: 1000px)");
 function monthOf(epoch) { const d = toDate(epoch); return { y: d.getUTCFullYear(), m: d.getUTCMonth() }; }
@@ -378,12 +401,13 @@ function render() {
   const view = $("#view");
   // Si se está escribiendo la frase del día, no la pisamos al refrescar.
   const active = document.activeElement;
-  const editingSummary = active && active.id && view.contains(active) && /^(INPUT|TEXTAREA)$/.test(active.tagName)
+  const editingSummary = active && active.id && (view.contains(active) || $("#habits-dialog").contains(active)) && /^(INPUT|TEXTAREA)$/.test(active.tagName)
     ? { id: active.id, value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
   const bar = $("#add-bar");
   const typing = document.activeElement === $("#add-text");
   $("#app").appendChild(bar); // sacarla antes de reescribir la vista (conserva lo escrito)
   view.innerHTML = { day: renderDay, week: renderWeek, month: renderMonth, pending: renderPending }[state.view]();
+  if ($("#habits-dialog").open) renderHabitsEditor();
   $("#sidebar").innerHTML = renderSidebar();
   const slot = $("#add-slot");
   const inline = desktopQuery.matches && slot;
@@ -432,6 +456,7 @@ document.addEventListener("click", (ev) => {
   if (act === "prevWeek") state.weekStart -= 7;
   if (act === "nextWeek") state.weekStart += 7;
   if (act === "thisWeek") state.weekStart = startOfWeek(todayEpoch());
+  if (act === "editHabits") return openHabitsEditor();
   if (act === "markDone") return save(setTranscribed(state.day, true));
   if (act === "unmark") return save(setTranscribed(state.day, false));
   render();
@@ -449,6 +474,14 @@ document.addEventListener("click", (ev) => {
   if (mig) return save(migrateTask(mig, state.day + 1));
   const del = ev.target.closest("[data-del]")?.dataset.del;
   if (del) return save(deleteEntry(del));
+  const hmove = ev.target.closest("[data-hmove]");
+  if (hmove && !hmove.disabled) return save(moveHabit(Number(hmove.dataset.hmove), Number(hmove.dataset.dir)));
+  const harch = ev.target.closest("[data-harchive]")?.dataset.harchive;
+  if (harch) {
+    const h = state.habits.get(Number(harch));
+    if (h && confirm(T.archiveConfirm(h.name))) save(archiveHabit(h.id));
+    return;
+  }
   const wx = ev.target.closest("[data-weather]")?.dataset.weather;
   if (wx) return save(setWeather(state.day, wx));
   const md = ev.target.closest("[data-mood]")?.dataset.mood;
@@ -473,6 +506,13 @@ document.addEventListener("submit", (ev) => {
 });
 document.addEventListener("change", (ev) => {
   if (ev.target.id === "summary") save(setSummary(state.day, ev.target.value));
+  const ren = ev.target.dataset?.hrename;
+  if (ren) {
+    const name = ev.target.value.trim();
+    const h = state.habits.get(Number(ren));
+    if (h && name && name !== h.name) save(renameHabit(h.id, name));
+    else if (h) ev.target.value = h.name;
+  }
 });
 
 // ---------- Barra de añadir (con los atajos de la app: "o " evento, "- " nota) ----------
@@ -483,6 +523,15 @@ function updateAddBar() {
   $("#add-type").textContent = TYPE_SYMBOL[addType];
   $("#add-text").placeholder = T.addPh(T.types[addType]);
 }
+$("#habits-close").addEventListener("click", () => $("#habits-dialog").close());
+$("#habit-add").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const input = $("#habit-new");
+  const name = input.value.trim();
+  if (!name) return;
+  input.value = "";
+  save(addHabit(name));
+});
 $("#add-type").addEventListener("click", () => { addType = NEXT_TYPE[addType]; updateAddBar(); $("#add-text").focus(); });
 $("#add-text").addEventListener("input", (ev) => {
   const v = ev.target.value;
@@ -598,6 +647,31 @@ async function toggleHabit(epoch, habitId) {
     { epochDay: epoch, date: isoDate(epoch), habitId, done: !done, updatedAt: now() });
   await touchDay(epoch);
 }
+// Hábitos. La app los identifica con un número (las marcas de cada día apuntan a él), así que
+// los creados en la web usan la marca de tiempo como id numérico para no chocar con los del móvil.
+async function addHabit(name) {
+  const id = Date.now();
+  const position = Math.max(-1, ...activeHabits().map((h) => h.position ?? 0)) + 1;
+  await setDoc(doc(db, ...userPath(), "habits", String(id)), { id, name, position, archived: false, updatedAt: now() });
+}
+async function renameHabit(id, name) {
+  await updateDoc(doc(db, ...userPath(), "habits", String(id)), { name, updatedAt: now() });
+}
+async function archiveHabit(id) {
+  await updateDoc(doc(db, ...userPath(), "habits", String(id)), { archived: true, updatedAt: now() });
+}
+async function moveHabit(id, offset) {
+  const list = activeHabits();
+  const from = list.findIndex((h) => h.id === id);
+  const to = from + offset;
+  if (from < 0 || to < 0 || to >= list.length) return;
+  list.splice(to, 0, list.splice(from, 1)[0]);
+  const t = now();
+  // Reescribe las posiciones 0..n (como hace la app) solo donde cambian.
+  await Promise.all(list.map((h, i) => h.position === i ? null
+    : updateDoc(doc(db, ...userPath(), "habits", String(h.id)), { position: i, updatedAt: t })));
+}
+
 // Tiempo y ánimo: tocar el elegido lo quita (null).
 async function setWeather(epoch, key) {
   const cur = state.days.get(epoch)?.weather ?? null;
