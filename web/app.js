@@ -9,6 +9,8 @@ import {
   getFirestore, collection, doc, onSnapshot, setDoc, updateDoc,
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
+import { WX_ICONS, MOOD_ICONS, MOOD_COLORS } from "./trackers.js";
+
 // Configuración pública del proyecto (no es secreta: protegen las reglas de Firestore).
 const firebaseConfig = {
   apiKey: "AIzaSyAYxroF94x_Y8kM08YXlD0OctP3ZXfQUqg",
@@ -30,7 +32,10 @@ const T = {
     appName: "Cuaderno de bolsillo", loginHint: "Tu cuaderno, copiado desde el móvil. Solo tu cuenta puede verlo.",
     signIn: "Entrar con Google", signOut: "Salir", tabDay: "Día", tabWeek: "Semana", tabMonth: "Mes", tabPending: "Pendientes",
     monthMode: "Mes", futureMode: "Futuro", futureTitle: "Registro futuro", monthTasks: "Tareas del mes",
-    calendar: "Calendario", monthEmpty: "Nada todavía", toNextMonth: (m) => `Pasar a ${m.toLowerCase()}`,
+    calendar: "Calendario", monthEmpty: "Nada todavía", trackers: "Tiempo y ánimo", tracking: "Seguimiento",
+    weather: "Tiempo", mood: "Ánimo",
+    wx: { sun: "Sol", partly: "Sol y nubes", cloud: "Nublado", rain: "Lluvia", storm: "Tormenta", wind: "Viento", snow: "Nieve" },
+    moods: { 5: "Genial", 4: "Bien", 3: "Normal", 2: "Regular", 1: "Mal" }, toNextMonth: (m) => `Pasar a ${m.toLowerCase()}`,
     today: "Hoy", thisWeek: "Esta semana", week: "Semana", habits: "Hábitos", summary: "Frase del día", log: "Registro",
     days: "Días", nothing: "Nada apuntado", noHabits: "Sin hábitos",
     statusDone: "Pasado al cuaderno ✓", statusChanged: "Cambios sin pasar", statusPending: "Pendiente de pasar al cuaderno",
@@ -47,7 +52,10 @@ const T = {
     appName: "Pocket Notebook", loginHint: "Your notebook, backed up from your phone. Only your account can see it.",
     signIn: "Sign in with Google", signOut: "Sign out", tabDay: "Day", tabWeek: "Week", tabMonth: "Month", tabPending: "To copy",
     monthMode: "Month", futureMode: "Future log", futureTitle: "Future log", monthTasks: "This month",
-    calendar: "Calendar", monthEmpty: "Nothing yet", toNextMonth: (m) => `Move to ${m}`,
+    calendar: "Calendar", monthEmpty: "Nothing yet", trackers: "Weather & mood", tracking: "Tracking",
+    weather: "Weather", mood: "Mood",
+    wx: { sun: "Sunny", partly: "Sun and clouds", cloud: "Cloudy", rain: "Rain", storm: "Storm", wind: "Windy", snow: "Snow" },
+    moods: { 5: "Great", 4: "Good", 3: "Okay", 2: "Meh", 1: "Bad" }, toNextMonth: (m) => `Move to ${m}`,
     today: "Today", thisWeek: "This week", week: "Week", habits: "Habits", summary: "Line of the day", log: "Log",
     days: "Days", nothing: "Nothing noted", noHabits: "No habits",
     statusDone: "Copied to the notebook ✓", statusChanged: "Changes not copied yet", statusPending: "Not copied to the notebook yet",
@@ -92,6 +100,15 @@ let unsubscribers = [];
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// ---------- Iconos de tiempo y ánimo ----------
+const MOOD_KEYS = { 5: "great", 4: "good", 3: "ok", 2: "meh", 1: "bad" };
+const svgIcon = (inner, size = 24, extra = "") =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${inner}</svg>`;
+const wxIcon = (key, size = 24) => WX_ICONS[key] ? svgIcon(WX_ICONS[key], size, `aria-label="${T.wx[key]}"`) : "";
+const moodIcon = (level, size = 24) => MOOD_ICONS[MOOD_KEYS[level]] ? svgIcon(MOOD_ICONS[MOOD_KEYS[level]], size, `aria-label="${T.moods[level]}"`) : "";
+const moodDot = (level, size = 20) => level
+  ? `<span class="mood-dot" style="width:${size}px;height:${size}px;background:${MOOD_COLORS[MOOD_KEYS[level]]}">${moodIcon(level, Math.round(size * 0.8))}</span>` : "";
+
 // ---------- Datos derivados ----------
 const entriesOf = (epoch) =>
   [...state.entries.values()].filter((e) => e.epochDay === epoch && !e.deleted)
@@ -102,7 +119,8 @@ const doneHabitIds = (epoch) =>
 
 function dayStatus(epoch) {
   const d = state.days.get(epoch);
-  const hasContent = entriesOf(epoch).length > 0 || doneHabitIds(epoch).size > 0 || (d?.summary || "").trim() !== "";
+  const hasContent = entriesOf(epoch).length > 0 || doneHabitIds(epoch).size > 0 || (d?.summary || "").trim() !== "" ||
+    d?.weather != null || d?.mood != null;
   if (d?.transcribed) return "done";
   if (d?.lastTranscribedAt) return "changed";
   return hasContent ? "pending" : null;
@@ -151,6 +169,7 @@ function renderDay() {
   const done = doneHabitIds(e);
   const habits = activeHabits();
   const statusText = { done: T.statusDone, changed: T.statusChanged, pending: T.statusPending }[status];
+  const trackersNew = d && isNew(e, d.trackersUpdatedAt || 0);
   return `
     <div class="nav">
       <button class="icon-btn" data-act="prev" aria-label="${T.prev}">‹</button>
@@ -163,6 +182,12 @@ function renderDay() {
       <button class="btn small ${status === "done" ? "" : "primary"}" data-act="${status === "done" ? "unmark" : "markDone"}">${status === "done" ? T.unmark : T.markDone}</button></div>` : ""}
     <div class="section-title">${T.habits}</div>
     <div class="chips">${habits.length ? habits.map((h) => `<button class="chip ${done.has(h.id) ? "on" : ""}" data-habit="${h.id}">${done.has(h.id) ? "✓ " : ""}${esc(h.name)}</button>`).join("") : `<span class="empty">${T.noHabits}</span>`}</div>
+    <div class="section-title">${[T.trackers, d?.weather ? T.wx[d.weather] : null, d?.mood ? T.moods[d.mood] : null].filter(Boolean).join(" · ")}</div>
+    <div class="picker ${trackersNew ? "changed" : ""}">${Object.keys(WX_ICONS).map((k) =>
+      `<button class="pick wx ${d?.weather === k ? "on" : ""}" data-weather="${k}" title="${T.wx[k]}">${wxIcon(k, 26)}</button>`).join("")}</div>
+    <div class="picker mood ${trackersNew ? "changed" : ""}">${[5, 4, 3, 2, 1].map((l) =>
+      `<button class="pick md ${d?.mood === l ? "on" : ""}" data-mood="${l}" title="${T.moods[l]}"
+         style="--mc:${MOOD_COLORS[MOOD_KEYS[l]]}">${moodIcon(l, 32)}</button>`).join("")}</div>
     <div class="section-title">${T.summary}</div>
     <textarea id="summary" class="summary-input" rows="2" placeholder="${T.summaryPh}">${esc(d?.summary || "")}</textarea>
     </section>
@@ -178,12 +203,14 @@ function renderWeek() {
   const today = todayEpoch();
   const isCurrent = start === startOfWeek(today);
   const habits = activeHabits();
-  const grid = habits.length ? `
-    <div class="section-title">${T.habits}</div>
+  const grid = `
+    <div class="section-title">${T.tracking}</div>
     <div class="card"><div class="grid">
       <span></span>${days.map((e) => `<span class="h ${e === today ? "today" : ""}">${weekLetter(e)}<br>${toDate(e).getUTCDate()}</span>`).join("")}
+      <span class="name muted">${T.weather}</span>${days.map((e) => `<span class="cell">${wxIcon(state.days.get(e)?.weather, 20)}</span>`).join("")}
+      <span class="name muted">${T.mood}</span>${days.map((e) => `<span class="cell">${moodDot(state.days.get(e)?.mood, 22)}</span>`).join("")}
       ${habits.map((h) => `<span class="name">${esc(h.name)}</span>${days.map((e) => `<span class="dot ${doneHabitIds(e).has(h.id) ? "on" : ""}"></span>`).join("")}`).join("")}
-    </div></div>` : "";
+    </div></div>`;
   const cards = days.map((e) => {
     const d = state.days.get(e);
     return `<div class="card clickable ${e === today ? "today" : ""}" data-open="${e}">
@@ -245,6 +272,22 @@ function monthEntryList(ym) {
     </form>`;
 }
 
+// Tracker del mes: cuadrícula L–D con el color del ánimo y el símbolo del tiempo.
+function monthTracker(mo, first, n) {
+  const lead = (toDate(first).getUTCDay() + 6) % 7;
+  const today = todayEpoch();
+  const head = [...Array(7).keys()].map((i) => `<span class="wd">${weekLetter(startOfWeek(today) + i)}</span>`).join("");
+  const cells = "<span></span>".repeat(lead) + [...Array(n).keys()].map((i) => {
+    const e = first + i;
+    const d = state.days.get(e);
+    const bg = d?.mood ? `background:${MOOD_COLORS[MOOD_KEYS[d.mood]]};color:#1E1B16` : "";
+    return `<button class="trk-cell ${e === today ? "today" : ""}" style="${bg}" data-open="${e}">
+      <span class="n">${i + 1}</span><span class="w">${wxIcon(d?.weather, 16)}</span></button>`;
+  }).join("");
+  const legend = [5, 4, 3, 2, 1].map((l) => `<span class="leg">${moodDot(l, 16)} ${T.moods[l]}</span>`).join("");
+  return `<div class="card trk-card"><div class="trk-grid">${head}${cells}</div><div class="legend">${legend}</div></div>`;
+}
+
 function renderMonth() {
   const mo = state.month || monthOf(todayEpoch());
   const isMonth = state.monthMode === "month";
@@ -273,7 +316,7 @@ function renderMonth() {
     return `<button class="cal-line ${e === today ? "today" : ""}" data-open="${e}">
       <span class="num">${i + 1}<small class="${dow >= 5 ? "we" : ""}">${weekLetter(e)}</small></span>
       <span>${events ? `<div class="ev">${events}</div>` : ""}${d?.summary ? `<div class="sm">“${esc(d.summary)}”</div>` : ""}${open ? `<div class="sm" style="font-style:normal">• ${open}</div>` : ""}</span>
-      <span class="dot-s ${st === "pending" ? "pending" : st === "changed" ? "changed" : ""}"></span></button>`;
+      <span class="line-trk">${wxIcon(d?.weather, 18)}${moodDot(d?.mood, 20)}<span class="dot-s ${st === "pending" ? "pending" : st === "changed" ? "changed" : ""}"></span></span></button>`;
   }).join("");
   return `${seg}
     <div class="nav">
@@ -284,7 +327,10 @@ function renderMonth() {
     </div>
     <div class="month-layout">
       <section class="month-tasks"><div class="section-title">${T.monthTasks}</div><div class="card">${monthEntryList(ymOf(mo))}</div></section>
-      <section><div class="section-title">${T.calendar}</div><div class="cal-list">${lines}</div></section>
+      <section>
+        <div class="section-title">${T.trackers}</div>${monthTracker(mo, first, n)}
+        <div class="section-title">${T.calendar}</div><div class="cal-list">${lines}</div>
+      </section>
     </div>`;
 }
 
@@ -403,6 +449,10 @@ document.addEventListener("click", (ev) => {
   if (mig) return save(migrateTask(mig, state.day + 1));
   const del = ev.target.closest("[data-del]")?.dataset.del;
   if (del) return save(deleteEntry(del));
+  const wx = ev.target.closest("[data-weather]")?.dataset.weather;
+  if (wx) return save(setWeather(state.day, wx));
+  const md = ev.target.closest("[data-mood]")?.dataset.mood;
+  if (md) return save(setMood(state.day, Number(md)));
   const habit = ev.target.closest("[data-habit]")?.dataset.habit;
   if (habit) return save(toggleHabit(state.day, Number(habit)));
 });
@@ -547,6 +597,15 @@ async function toggleHabit(epoch, habitId) {
   await setDoc(doc(db, ...userPath(), "habitChecks", `${epoch}_${habitId}`),
     { epochDay: epoch, date: isoDate(epoch), habitId, done: !done, updatedAt: now() });
   await touchDay(epoch);
+}
+// Tiempo y ánimo: tocar el elegido lo quita (null).
+async function setWeather(epoch, key) {
+  const cur = state.days.get(epoch)?.weather ?? null;
+  await touchDay(epoch, { weather: cur === key ? null : key, trackersUpdatedAt: now() });
+}
+async function setMood(epoch, level) {
+  const cur = state.days.get(epoch)?.mood ?? null;
+  await touchDay(epoch, { mood: cur === level ? null : level, trackersUpdatedAt: now() });
 }
 async function setSummary(epoch, text) {
   if ((state.days.get(epoch)?.summary || "") === text) return;

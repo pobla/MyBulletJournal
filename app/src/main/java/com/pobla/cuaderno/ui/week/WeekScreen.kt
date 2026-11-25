@@ -73,6 +73,8 @@ import com.pobla.cuaderno.util.weekdayLetter
 import java.time.LocalDate
 import androidx.compose.ui.res.stringResource
 import com.pobla.cuaderno.R
+import com.pobla.cuaderno.ui.components.WeatherIcon
+import com.pobla.cuaderno.ui.components.MoodDot
 
 private const val MAX_ENTRIES_PREVIEW = 6
 
@@ -163,8 +165,8 @@ fun WeekScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (state.habits.isNotEmpty() && state.days.isNotEmpty()) {
-                item(key = "habits_title") { SectionTitle(stringResource(R.string.section_habits)) }
+            if (state.days.isNotEmpty()) {
+                item(key = "habits_title") { SectionTitle(stringResource(R.string.section_tracking)) }
                 item(key = "habits") {
                     HabitGrid(state = state, onToggle = onToggleHabit)
                 }
@@ -208,6 +210,9 @@ private fun HabitGrid(state: WeekUiState, onToggle: (LocalDate, Long) -> Unit) {
                 }
             }
             Spacer(Modifier.height(4.dp))
+            // Tiempo y ánimo de cada día
+            TrackerGridRow(stringResource(R.string.weather), state.days) { day -> day.weather?.let { WeatherIcon(it, 20.dp) } }
+            TrackerGridRow(stringResource(R.string.mood), state.days) { day -> day.mood?.let { MoodDot(it, 22.dp) } }
             state.habits.forEach { habit ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -240,6 +245,24 @@ private fun HabitGrid(state: WeekUiState, onToggle: (LocalDate, Long) -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+/** Fila de la rejilla semanal con un icono por día (tiempo o ánimo). */
+@Composable
+private fun TrackerGridRow(label: String, days: List<WeekDayUi>, cell: @Composable (WeekDayUi) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(NAME_WIDTH).padding(end = 4.dp),
+        )
+        days.forEach { day ->
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).height(32.dp)) { cell(day) }
         }
     }
 }

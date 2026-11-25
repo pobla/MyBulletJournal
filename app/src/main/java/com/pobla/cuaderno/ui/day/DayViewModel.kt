@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.pobla.cuaderno.model.Mood
+import com.pobla.cuaderno.model.Weather
 
 data class HabitUi(val id: Long, val name: String, val done: Boolean, val changed: Boolean)
 
@@ -47,6 +49,10 @@ data class DayUiState(
     val transcribed: Boolean = false,
     val lastTranscribedAt: Long? = null,
     val hasContent: Boolean = false,
+    val weather: Weather? = null,
+    val mood: Mood? = null,
+    /** Tiempo o ánimo cambiados desde que se pasó al cuaderno. */
+    val trackersChanged: Boolean = false,
 ) {
     /** Se pasó al cuaderno alguna vez y después hubo cambios. */
     val changedSinceTranscribed: Boolean get() = !transcribed && lastTranscribedAt != null
@@ -109,6 +115,17 @@ class DayViewModel(
     fun toggleHabit(habitId: Long) {
         val date = currentDate
         appScope.launch { repository.toggleHabit(date, habitId) }
+    }
+
+    // Tiempo y ánimo
+    fun setWeather(weather: Weather?) {
+        val date = currentDate
+        appScope.launch { repository.setWeather(date, weather) }
+    }
+
+    fun setMood(mood: Mood?) {
+        val date = currentDate
+        appScope.launch { repository.setMood(date, mood) }
     }
 
     // Cuaderno
@@ -190,6 +207,10 @@ private fun DayData.toUiState(date: LocalDate): DayUiState {
         summaryChanged = day != null && isNew(day.summaryUpdatedAt),
         transcribed = transcribed,
         lastTranscribedAt = last,
-        hasContent = entries.isNotEmpty() || checks.any { it.done } || summary.isNotBlank(),
+        hasContent = entries.isNotEmpty() || checks.any { it.done } || summary.isNotBlank() ||
+            day?.weather != null || day?.mood != null,
+        weather = Weather.fromKey(day?.weather),
+        mood = Mood.fromLevel(day?.mood),
+        trackersChanged = day != null && isNew(day.trackersUpdatedAt),
     )
 }

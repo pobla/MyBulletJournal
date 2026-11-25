@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PhotoEntity::class,
         MonthEntryEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -63,6 +63,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v5 → v6: tiempo y ánimo del día. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE days ADD COLUMN weather TEXT")
+                db.execSQL("ALTER TABLE days ADD COLUMN mood INTEGER")
+                db.execSQL("ALTER TABLE days ADD COLUMN trackersUpdatedAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun build(context: Context): AppDatabase {
             // Hábitos iniciales en el idioma del móvil al instalar.
             val defaultHabits = context.resources.getStringArray(com.pobla.cuaderno.R.array.default_habits)
@@ -77,7 +86,7 @@ abstract class AppDatabase : RoomDatabase() {
                         }
                     }
                 })
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
         }
     }

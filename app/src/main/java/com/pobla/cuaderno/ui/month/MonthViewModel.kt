@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import com.pobla.cuaderno.model.Mood
+import com.pobla.cuaderno.model.Weather
 
 enum class MonthMode { MONTH, FUTURE }
 
@@ -45,6 +47,8 @@ data class MonthDayUi(
     val openTasks: Int,
     val summary: String,
     val status: TranscribeStatus,
+    val weather: Weather? = null,
+    val mood: Mood? = null,
 )
 
 data class MonthUiState(
@@ -101,8 +105,11 @@ class MonthViewModel(
                             events = dayEntries.filter { it.type == EntryType.EVENT }.map { it.text },
                             openTasks = dayEntries.count { it.type == EntryType.TASK && it.status == TaskStatus.OPEN },
                             summary = summary,
+                            weather = Weather.fromKey(day?.weather),
+                            mood = Mood.fromLevel(day?.mood),
                             status = transcribeStatus(
-                                hasContent = dayEntries.isNotEmpty() || !doneByDay[key].isNullOrEmpty() || summary.isNotBlank(),
+                                hasContent = dayEntries.isNotEmpty() || !doneByDay[key].isNullOrEmpty() || summary.isNotBlank() ||
+                                    day?.weather != null || day?.mood != null,
                                 transcribed = day?.transcribed ?: false,
                                 lastTranscribedAt = day?.lastTranscribedAt,
                             ),

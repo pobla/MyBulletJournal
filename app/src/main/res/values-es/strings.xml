@@ -235,4 +235,22 @@
     <string name="move_to_month">Pasar a %1$s</string>
     <string name="previous_month">Mes anterior</string>
     <string name="next_month">Mes siguiente</string>
+
+    <!-- Tiempo y ánimo -->
+    <string name="section_trackers">Tiempo y ánimo</string>
+    <string name="section_tracking">Seguimiento</string>
+    <string name="weather">Tiempo</string>
+    <string name="mood">Ánimo</string>
+    <string name="wx_sun">Sol</string>
+    <string name="wx_partly">Sol y nubes</string>
+    <string name="wx_cloud">Nublado</string>
+    <string name="wx_rain">Lluvia</string>
+    <string name="wx_storm">Tormenta</string>
+    <string name="wx_wind">Viento</string>
+    <string name="wx_snow">Nieve</string>
+    <string name="mood_great">Genial</string>
+    <string name="mood_good">Bien</string>
+    <string name="mood_ok">Normal</string>
+    <string name="mood_meh">Regular</string>
+    <string name="mood_bad">Mal</string>
 </resources>

@@ -121,6 +121,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import com.pobla.cuaderno.util.shortDayMonth
+import com.pobla.cuaderno.model.Mood
+import com.pobla.cuaderno.model.Weather
+import com.pobla.cuaderno.ui.components.WeatherPicker
+import com.pobla.cuaderno.ui.components.MoodPicker
 
 @Composable
 fun DayRoute(
@@ -138,6 +142,8 @@ fun DayRoute(
         onAddEntry = viewModel::addEntry,
         onCycleTask = viewModel::cycleTask,
         onMigrate = viewModel::migrateTask,
+        onWeather = viewModel::setWeather,
+        onMood = viewModel::setMood,
         onUpdateEntry = viewModel::updateEntry,
         onDeleteEntry = viewModel::deleteEntry,
         onSetTranscribed = viewModel::setTranscribed,
@@ -160,6 +166,8 @@ fun DayScreen(
     onSetTranscribed: (Boolean) -> Unit,
     onImport: () -> Unit = {},
     onMigrate: (Long, LocalDate) -> Unit = { _, _ -> },
+    onWeather: (Weather?) -> Unit = {},
+    onMood: (Mood?) -> Unit = {},
 ) {
     var editing by remember { mutableStateOf<EntryUi?>(null) }
     var pickingMigration by remember { mutableStateOf<EntryUi?>(null) }
@@ -280,6 +288,8 @@ fun DayScreen(
                 onToggleHabit = onToggleHabit,
                 onSummaryChange = onSummaryChange,
                 onCycle = cycle,
+                onWeather = onWeather,
+                onMood = onMood,
                 onEdit = { editing = it },
                 onSetTranscribed = onSetTranscribed,
             )
@@ -364,6 +374,8 @@ private fun DayContent(
     onToggleHabit: (Long) -> Unit,
     onSummaryChange: (String) -> Unit,
     onCycle: (EntryUi) -> Unit,
+    onWeather: (Weather?) -> Unit,
+    onMood: (Mood?) -> Unit,
     onEdit: (EntryUi) -> Unit,
     onSetTranscribed: (Boolean) -> Unit,
 ) {
@@ -383,6 +395,21 @@ private fun DayContent(
 
         item(key = "habits_title") { SectionTitle(stringResource(R.string.section_habits)) }
         item(key = "habits") { HabitsRow(habits = state.habits, onToggle = onToggleHabit) }
+
+        item(key = "trackers_title") {
+            // "Tiempo y ánimo · Lluvia · Bien"
+            val parts = listOfNotNull(
+                state.weather?.let { stringResource(it.labelRes) },
+                state.mood?.let { stringResource(it.labelRes) },
+            )
+            SectionTitle(
+                (listOf(stringResource(R.string.section_trackers)) + parts).joinToString(" · "),
+            )
+        }
+        item(key = "weather") { WeatherPicker(state.weather, state.trackersChanged, onWeather) }
+        item(key = "mood") {
+            Box(Modifier.padding(top = 6.dp)) { MoodPicker(state.mood, state.trackersChanged, onMood) }
+        }
 
         item(key = "summary_title") { SectionTitle(stringResource(R.string.section_summary)) }
         item(key = "summary") { SummaryField(state = state, onChange = onSummaryChange) }
