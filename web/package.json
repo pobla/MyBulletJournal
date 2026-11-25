@@ -1,0 +1,11 @@
+{
+  "name": "cuaderno-web-tests",
+  "private": true,
+  "description": "Tests de la web del cuaderno (Playwright con un Firebase simulado). No se despliega.",
+  "scripts": {
+    "test": "node --test tests/web.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

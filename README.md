@@ -20,6 +20,10 @@ También puedes lanzar una compilación a mano: *Actions* → *APK debug* → *R
 
 Desde la versión #5, la app comprueba **una vez al día al abrirse** si hay un APK más nuevo en la release `debug-latest` y lo ofrece. Se descarga dentro de la app y Android pide confirmar la instalación (la primera vez, también permitir "instalar apps desconocidas" para Cuaderno de bolsillo). También se puede buscar a mano en *Ajustes → Actualizaciones*. Requiere que el repo sea público.
 
+### Tests de la web
+
+`web/tests/` tiene tests con Playwright y un Firebase simulado (login falso y Firestore en memoria): añadir con atajos, migrar tareas, hábitos y su editor, tiempo y ánimo, mes y registro futuro, y el diseño de móvil y escritorio. Se ejecutan en el workflow de la web antes de desplegar (si fallan, no se publica). En local: `cd web && npm install && npm test`.
+
 ### Notas de versión
 
 El workflow genera `changelog.tsv` a partir de los mensajes de commit (título + líneas que empiezan por `- ` del cuerpo; se omiten los commits "README…"). Va dentro del APK y adjunto a la release:
