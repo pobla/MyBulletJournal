@@ -45,6 +45,20 @@
     <footer class="footer"><span id="who"></span> · <span id="last-sync"></span></footer>
   </div>
 
+  <!-- Editor de hábitos (fuera de la vista para no perder lo escrito al refrescar) -->
+  <dialog id="habits-dialog" class="sheet">
+    <div class="sheet-head">
+      <h3 data-i18n="editHabits"></h3>
+      <button class="btn text" id="habits-close" type="button" data-i18n="done"></button>
+    </div>
+    <ul id="habits-edit" class="habit-list"></ul>
+    <form id="habit-add" class="mini-add" autocomplete="off">
+      <input id="habit-new" type="text" enterkeyhint="done">
+      <button class="icon-btn send" type="submit" style="width:36px;height:36px;background:var(--primary);color:var(--on-primary)">＋</button>
+    </form>
+    <p class="empty small" data-i18n="habitsHint"></p>
+  </dialog>
+
   <div id="loading" class="loading"><span class="dot"></span></div>
 
   <script type="module" src="app.js"></script>

@@ -324,6 +324,30 @@ body.with-bar .footer { padding-bottom: 96px; }
 .leg { display: inline-flex; align-items: center; gap: 4px; }
 .month-tasks .card + .section-title { margin-top: 20px; }
 
+/* ---------- Editor de hábitos ---------- */
+.title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.title-row .btn.text { font-size: 13px; padding: 4px 10px; }
+dialog.sheet {
+  border: 0; border-radius: 28px; padding: 20px; width: min(440px, calc(100vw - 32px));
+  background: var(--bg); color: var(--ink); box-shadow: 0 12px 48px rgba(0, 0, 0, .25);
+}
+dialog.sheet::backdrop { background: rgba(0, 0, 0, .35); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sheet-head h3 { margin: 0; }
+.habit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.habit-list li { display: flex; align-items: center; gap: 4px; background: var(--surface); border-radius: 16px; padding: 4px 4px 4px 12px; }
+.habit-list input {
+  flex: 1; min-width: 0; font: inherit; color: var(--ink); background: transparent; border: 0; padding: 8px 4px; border-radius: 10px;
+}
+.habit-list input:focus { outline: 2px solid var(--primary); background: var(--bg); }
+.habit-list button {
+  border: 0; background: transparent; color: var(--muted); width: 34px; height: 34px; border-radius: 50%;
+  cursor: pointer; font-size: 15px;
+}
+.habit-list button:hover:not(:disabled) { background: var(--surface-high); color: var(--ink); }
+.habit-list button:disabled { opacity: .3; cursor: default; }
+.empty.small { font-size: 13px; margin: 10px 4px 0; }
+
 .footer { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 16px 24px; }
 
 .loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
