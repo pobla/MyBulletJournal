@@ -26,6 +26,17 @@ jobs:
         with:
           node-version: "22"
 
+      # Tests de la web con Playwright y Firebase simulado. Usan el Chrome que ya trae el runner
+      # (sin descargar navegadores), así que añaden muy poco tiempo. Si fallan, no se despliega.
+      - name: Tests de la web
+        working-directory: web
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+          PW_CHANNEL: chrome
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+
       - name: Comprobar secreto
         id: secret
         env:

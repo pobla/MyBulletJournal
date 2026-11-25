@@ -10,3 +10,4 @@ captures/
 .kotlin/
 # Generado por CI
 app/src/main/assets/changelog.tsv
+web/node_modules/
